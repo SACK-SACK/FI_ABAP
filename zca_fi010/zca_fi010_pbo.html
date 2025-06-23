@@ -1,0 +1,140 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 3.2//EN">
+<html>
+<head>
+<title>ZCA_FI010_PBO</title>
+</head>
+<body bgcolor="#FFFFE0">
+<font size="3" face = "Arial" color="#000000"><b>Code listing for: ZCA_FI010_PBO</b></font>
+<br>
+<font size="3" face = "Arial" color="#000000"><b>Description:  Include ZCA_FI010_PBO</b></font>
+<hr>
+<pre width="100">
+<font color ="#0000FF">*&---------------------------------------------------------------------*</font>
+<font color ="#0000FF">*& Include          ZCA_FI010_PBO</font>
+<font color ="#0000FF">*&---------------------------------------------------------------------*</font>
+<font color ="#0000FF">*&---------------------------------------------------------------------*</font>
+<font color ="#0000FF">*& Module STATUS_0100 OUTPUT</font>
+<font color ="#0000FF">*&---------------------------------------------------------------------*</font>
+MODULE status_0100 OUTPUT.
+  SET PF-STATUS 'S0100'.
+  SET TITLEBAR 'T0100'.   " 결산 관리
+<font color ="#0000FF">*  btn_text = |@10@ 검색|.</font>
+ENDMODULE.
+
+<font color ="#0000FF">*&---------------------------------------------------------------------*</font>
+<font color ="#0000FF">*& Module CLEAR_OK_CODE OUTPUT</font>
+<font color ="#0000FF">*&---------------------------------------------------------------------*</font>
+MODULE clear_ok_code OUTPUT.
+
+  CLEAR ok_code.
+
+ENDMODULE.
+<font color ="#0000FF">*&---------------------------------------------------------------------*</font>
+<font color ="#0000FF">*& Module INIT_TREE_0100 OUTPUT</font>
+<font color ="#0000FF">*&---------------------------------------------------------------------*</font>
+MODULE init_tree_0100 OUTPUT.
+
+  IF go_custom_container IS INITIAL .
+    PERFORM init_today_period. " 오늘 주차 구하기
+    PERFORM init_tree.
+<font color ="#0000FF">*  ELSE.</font>
+<font color ="#0000FF">*    go_alv_tree-&gt;frontend_update( ).</font>
+  ENDIF.
+
+ENDMODULE.
+<font color ="#0000FF">*&---------------------------------------------------------------------*</font>
+<font color ="#0000FF">*& Module STATUS_0120 OUTPUT</font>
+<font color ="#0000FF">*&---------------------------------------------------------------------*</font>
+MODULE status_0120 OUTPUT.
+  SET PF-STATUS 'S0120'.
+  SET TITLEBAR 'T0120'.
+
+  IF gv_balance_credit_sum EQ gv_balance_debit_sum.
+    s0120-status_icon = icon_led_green.
+    s0120-status_text = '차/대변 일치'(t03).
+  ELSE.
+    s0120-status_icon = icon_led_red.
+    s0120-status_text = '차/대변 불일치'(t04).
+  ENDIF.
+
+ENDMODULE.
+<font color ="#0000FF">*&---------------------------------------------------------------------*</font>
+<font color ="#0000FF">*& Module INIT_ALV_0120 OUTPUT</font>
+<font color ="#0000FF">*&---------------------------------------------------------------------*</font>
+MODULE init_alv_0120 OUTPUT.
+
+  IF go_cont_popup IS INITIAL .
+
+    CREATE OBJECT go_cont_popup
+      EXPORTING
+        container_name = 'CCON_POP'.                 " Name of the Screen CustCtrl Name to Link Container To
+
+    CREATE OBJECT go_alv_popup
+      EXPORTING
+        i_parent = go_cont_popup.                 " Parent Container
+
+    CLEAR gs_layout_p.
+    gs_layout_p-sel_mode   = 'A'.  " 셀 단위 선택
+    gs_layout_p-zebra      = abap_on.
+    gs_layout_p-ctab_fname = 'CELL_COLORS'.
+<font color ="#0000FF">*    gs_layout_p-cwidth_opt = abap_on.</font>
+
+    " Variant 설정
+    CLEAR gs_variant_p.
+    gs_variant_p-report = sy-repid.
+    gs_variant_p-handle = 'ALV2'.
+    gv_save_p = 'A'. " Layout 저장 허용
+
+    " 필드카탈로그 세팅
+    PERFORM set_popup_fieldcat.
+
+    SET HANDLER lcl_event_handler=&gt;on_user_command FOR go_alv_popup.
+    SET HANDLER lcl_event_handler=&gt;on_toolbar FOR go_alv_popup.
+    SET HANDLER lcl_event_handler=&gt;on_alv_double_click FOR go_alv_popup.
+
+    " ALV에 데이터 연결
+    CALL METHOD go_alv_popup-&gt;set_table_for_first_display
+      EXPORTING
+        is_layout       = gs_layout_p
+        i_save          = gv_save_p
+        is_variant      = gs_variant_p
+      CHANGING
+        it_outtab       = gt_trial
+        it_fieldcatalog = gt_field_cat_p.
+
+  ELSE.
+    " 이미 생성되어있으면 Refresh
+    CALL METHOD go_alv_popup-&gt;refresh_table_display.
+  ENDIF.
+
+ENDMODULE.
+<font color ="#0000FF">*&---------------------------------------------------------------------*</font>
+<font color ="#0000FF">*& Module STATUS_0130 OUTPUT</font>
+<font color ="#0000FF">*&---------------------------------------------------------------------*</font>
+MODULE status_0130 OUTPUT.
+  SET PF-STATUS 'S0130'.
+  SET TITLEBAR 'T0130' WITH zca_fit110-gltxt.
+ENDMODULE.
+<font color ="#0000FF">*&---------------------------------------------------------------------*</font>
+<font color ="#0000FF">*& Module INIT_ALV_0130 OUTPUT</font>
+<font color ="#0000FF">*&---------------------------------------------------------------------*</font>
+MODULE init_alv_0130 OUTPUT.
+
+  IF go_custom_container_0130 IS INITIAL.
+
+    PERFORM create_object_0130.
+    PERFORM set_alv_layout_0130.
+    PERFORM set_alv_fieldcat_0130.
+    PERFORM set_alv_table_for_display_0130.
+
+  ELSE.
+    go_alv_0130-&gt;refresh_table_display( ).
+  ENDIF.
+
+ENDMODULE.
+</pre>
+<hr>
+<font size="2" face = "Sans Serif">Extracted by Direct Download Enterprise version 1.3.1 - E.G.Mellodew. 1998-2005 UK. Sap Release 758
+</font>
+</body>
+</html>

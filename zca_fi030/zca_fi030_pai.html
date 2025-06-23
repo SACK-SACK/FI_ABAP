@@ -1,0 +1,133 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 3.2//EN">
+<html>
+<head>
+<title>ZCA_FI030_PAI</title>
+</head>
+<body bgcolor="#FFFFE0">
+<font size="3" face = "Arial" color="#000000"><b>Code listing for: ZCA_FI030_PAI</b></font>
+<br>
+<font size="3" face = "Arial" color="#000000"><b>Description:  PAI</b></font>
+<hr>
+<pre width="100">
+<font color ="#0000FF">*&---------------------------------------------------------------------*</font>
+<font color ="#0000FF">*& Include          ZCA_FI030_PAI</font>
+<font color ="#0000FF">*&---------------------------------------------------------------------*</font>
+<font color ="#0000FF">*&---------------------------------------------------------------------*</font>
+<font color ="#0000FF">*&      Module  USER_COMMAND_0100  INPUT</font>
+<font color ="#0000FF">*&---------------------------------------------------------------------*</font>
+<font color ="#0000FF">*       text</font>
+<font color ="#0000FF">*----------------------------------------------------------------------*</font>
+MODULE user_command_0100 INPUT.
+  CASE ok_code.
+    WHEN 'BACK'.
+      LEAVE TO SCREEN 0.
+
+    WHEN 'FC1' OR 'FC2'.
+      " Next Screen(다음화면)에 내가 지금 누른 버튼(탭)이 눌리도록 activetab 으로 설정하고,
+      my_tabstrip-activetab = ok_code.  " 이 activetab의 값에 의해 보여질 화면번호가 결정
+      REFRESH gt_fit070.
+      CLEAR screen0100.
+      LEAVE SCREEN.
+
+
+    WHEN 'CREATE'.
+     PERFORM make_create_popup.
+  ENDCASE.
+
+ENDMODULE.
+<font color ="#0000FF">*&---------------------------------------------------------------------*</font>
+<font color ="#0000FF">*&      Module  EXIT  INPUT</font>
+<font color ="#0000FF">*----------------------------------------------------------------------*</font>
+MODULE exit INPUT.
+
+  CASE ok_code.
+    WHEN 'CANC'.
+      LEAVE TO SCREEN 0.
+    WHEN 'EXIT'.
+      LEAVE PROGRAM.
+  ENDCASE.
+
+ENDMODULE.
+<font color ="#0000FF">*&---------------------------------------------------------------------*</font>
+<font color ="#0000FF">*& Form make_create_popup</font>
+<font color ="#0000FF">*&---------------------------------------------------------------------*</font>
+FORM make_create_popup .
+
+  " 임시 전표 생성 팝업 호출
+  CALL SCREEN 130 STARTING AT 10 5. " 팝업창 호출
+
+ENDFORM.
+<font color ="#0000FF">*&---------------------------------------------------------------------*</font>
+<font color ="#0000FF">*&      Module  USER_COMMAND_0130  INPUT</font>
+<font color ="#0000FF">*----------------------------------------------------------------------*</font>
+MODULE user_command_0130 INPUT.
+
+    CASE ok_code.
+
+    WHEN 'BACK'.
+      LEAVE TO SCREEN 0.
+
+    WHEN 'HEAD'.  " 헤더
+      IF zca_fit060-blart IS INITIAL.
+        MESSAGE i400. " 전표유형을 입력하세요.
+      ENDIF.
+
+      IF zca_fit060-bltxt IS INITIAL.
+        MESSAGE i401. " 전표헤더텍스트를 입력하세요.
+      ENDIF.
+
+      PERFORM create_header.
+
+   WHEN 'ITEM'.  " 아이템
+
+     " 전기키를 입력해줘야 함
+     zca_tbsl-bschl = zca_fit070-bschl.
+
+     IF zca_tbsl-bschl IS INITIAL.
+       MESSAGE  i402. " 전기키를 입력하세요.
+      ENDIF.
+
+      IF zca_fit070-saknr IS INITIAL.
+        MESSAGE i403. " 계정과목을 입력하세요.
+      ENDIF.
+
+      IF zca_fit070-dmbtr IS INITIAL OR zca_fit070-dmbtr = 0.
+        MESSAGE i404. " 금액을 입력하세요.
+      ENDIF.
+
+      PERFORM create_item.
+
+    WHEN 'CONTINUE'. " 전표 최종 생성
+
+      PERFORM save_document.
+      MESSAGE s456. " 임시전표가 생성되었습니다.
+
+
+    WHEN 'CAN'.
+      " 전체 취소 -&gt; 메모리 다 비우기
+      ROLLBACK WORK.
+      CLEAR: zca_fit060, zca_fit070, zca_tbsl,
+               gt_item[], gs_item, s_money, h_money, total_money,
+               status_icon, status_text, st_icon.
+
+      go_alv_grid_0130-&gt;refresh_table_display( ).
+
+      MESSAGE s405. " 전표 입력이 취소되었습니다.
+
+    ENDCASE.
+
+ENDMODULE.
+<font color ="#0000FF">*&---------------------------------------------------------------------*</font>
+<font color ="#0000FF">*&      Module  USER_COMMAND_0150  INPUT</font>
+<font color ="#0000FF">*&---------------------------------------------------------------------*</font>
+<font color ="#0000FF">*       text</font>
+<font color ="#0000FF">*----------------------------------------------------------------------*</font>
+MODULE user_command_0150 INPUT.
+
+ENDMODULE.
+</pre>
+<hr>
+<font size="2" face = "Sans Serif">Extracted by Direct Download Enterprise version 1.3.1 - E.G.Mellodew. 1998-2005 UK. Sap Release 758
+</font>
+</body>
+</html>

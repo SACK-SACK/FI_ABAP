@@ -1,0 +1,49 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 3.2//EN">
+<html>
+<head>
+<title>ZCA_FI100_PAI</title>
+</head>
+<body bgcolor="#FFFFE0">
+<font size="3" face = "Arial" color="#000000"><b>Code listing for: ZCA_FI100_PAI</b></font>
+<br>
+<font size="3" face = "Arial" color="#000000"><b>Description:  PAI</b></font>
+<hr>
+<pre width="100">
+<font color ="#0000FF">*&---------------------------------------------------------------------*</font>
+<font color ="#0000FF">*& Include          ZCA_FI100_PAI</font>
+<font color ="#0000FF">*&---------------------------------------------------------------------*</font>
+<font color ="#0000FF">*&---------------------------------------------------------------------*</font>
+<font color ="#0000FF">*&      Module  EXIT  INPUT</font>
+<font color ="#0000FF">*----------------------------------------------------------------------*</font>
+MODULE exit INPUT.
+
+  CASE ok_code.
+    WHEN 'CANC'.
+      LEAVE TO SCREEN 0.
+    WHEN 'EXIT'.
+      LEAVE PROGRAM.
+   ENDCASE.
+
+ENDMODULE.
+<font color ="#0000FF">*&---------------------------------------------------------------------*</font>
+<font color ="#0000FF">*&      Module  USER_COMMAND_0100  INPUT</font>
+<font color ="#0000FF">*----------------------------------------------------------------------*</font>
+MODULE user_command_0100 INPUT.
+
+  CASE OK_CODE.
+    WHEN 'BACK'.
+      LEAVE TO SCREEN 0.
+
+    WHEN 'FC1' OR 'FC2' OR 'FC3' OR 'FC4' OR 'FC5'.
+      " Next Screen(다음화면)에 내가 지금 누른 버튼(탭)이 눌리도록 activetab 으로 설정하고,
+      PERFORM set_category_data.
+      my_tabstrip-activetab = ok_code.  " 이 activetab의 값에 의해 보여질 화면번호가 결정
+  ENDCASE.
+
+ENDMODULE.
+</pre>
+<hr>
+<font size="2" face = "Sans Serif">Extracted by Direct Download Enterprise version 1.3.1 - E.G.Mellodew. 1998-2005 UK. Sap Release 758
+</font>
+</body>
+</html>

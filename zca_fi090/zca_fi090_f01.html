@@ -1,0 +1,547 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 3.2//EN">
+<html>
+<head>
+<title>ZCA_FI090_F01</title>
+</head>
+<body bgcolor="#FFFFE0">
+<font size="3" face = "Arial" color="#000000"><b>Code listing for: ZCA_FI090_F01</b></font>
+<br>
+<font size="3" face = "Arial" color="#000000"><b>Description:  Include ZCA_FI090_F01</b></font>
+<hr>
+<pre width="100">
+<font color ="#0000FF">*&---------------------------------------------------------------------*</font>
+<font color ="#0000FF">*& Include          ZCA_FI090_F01</font>
+<font color ="#0000FF">*&---------------------------------------------------------------------*</font>
+<font color ="#0000FF">*&---------------------------------------------------------------------*</font>
+<font color ="#0000FF">*& Form display_data</font>
+<font color ="#0000FF">*&---------------------------------------------------------------------*</font>
+FORM display_data .
+  screen0100-pyear = |{ so_year-low }|.
+  screen0100-price = gs_year_summary-net_income.
+  screen0100-cuky = 'KRW'.
+  screen0100-profit = gs_year_summary-net_margin.
+  screen0100-percent = '%'.
+  CALL SCREEN 0100.
+ENDFORM.
+<font color ="#0000FF">*&---------------------------------------------------------------------*</font>
+<font color ="#0000FF">*& Form select_data</font>
+<font color ="#0000FF">*&---------------------------------------------------------------------*</font>
+FORM select_data .
+
+  " 초기화
+  REFRESH: gt_fit110, gt_date_range.
+
+  " 조건 분기 없이 심플하게 처리
+  IF so_week[] IS INITIAL AND so_month[] IS INITIAL.
+    " 연도 전체
+    SELECT * INTO TABLE @gt_fit110
+      FROM zca_fit110
+      WHERE pyear = @so_year-low
+        AND category_sort IN ( '4', '5' ).
+
+    SELECT * INTO TABLE @gt_date_range
+      FROM zca_date
+      WHERE pyear = @so_year-low.
+
+  ELSEIF so_week[] IS INITIAL.
+    " 월 누계
+    SELECT * INTO TABLE @gt_fit110
+      FROM zca_fit110
+      WHERE pyear = @so_year-low
+        AND pmonth &lt;= @so_month-low
+        AND category_sort IN ( '4', '5' ).
+
+    SELECT * INTO TABLE @gt_date_range
+      FROM zca_date
+      WHERE pyear  = @so_year-low
+        AND pmonth &lt;= @so_month-low.
+
+  ELSE.
+    " 주차 누계
+    SELECT * INTO TABLE @gt_fit110
+      FROM zca_fit110
+      WHERE pyear = @so_year-low
+        AND (
+             pmonth &lt; @so_month-low OR
+             ( pmonth = @so_month-low AND pweek &lt;= @so_week-low )
+            )
+        AND category_sort IN ( '4', '5' ).
+
+    SELECT * INTO TABLE @gt_date_range
+      FROM zca_date
+      WHERE pyear = @so_year-low
+        AND (
+             pmonth &lt; @so_month-low OR
+             ( pmonth = @so_month-low AND pweek &lt;= @so_week-low )
+            ).
+  ENDIF.
+
+
+  IF sy-subrc &lt;&gt; 0.
+    MESSAGE s427 DISPLAY LIKE 'E'. " 결산 데이터가 없습니다.
+  ENDIF.
+
+ENDFORM.
+<font color ="#0000FF">*&---------------------------------------------------------------------*</font>
+<font color ="#0000FF">*& Form calculate_profit</font>
+<font color ="#0000FF">*&---------------------------------------------------------------------*</font>
+FORM calculate_profit .
+
+  " 이번 년도 누적의 손익을 계산
+
+  REFRESH gt_profit_summary.
+  CLEAR : gs_year_summary, gs_profit_summary.
+  DATA ls_summary TYPE zca_fi_profit_summary.
+
+  call function <a href ="zca_fi_calculate_profit/zca_fi_calculate_profit.html">'ZCA_FI_CALCULATE_PROFIT'</a>
+    EXPORTING
+      iv_year         = '2025'           " 계획 년도
+      iv_month        = so_month-low                 " 계획 월
+      iv_week         = so_week-low                 " 계획 주차
+    IMPORTING
+      es_year_summary = ls_summary                 " 해당 연도 누계 손익
+<font color ="#0000FF">*     ev_net_income   =                  " 최종 당기순이익</font>
+    .
+
+  MOVE-CORRESPONDING ls_summary TO gs_year_summary.
+  PERFORM calculate_margins CHANGING gs_year_summary.
+
+ENDFORM.
+<font color ="#0000FF">*&---------------------------------------------------------------------*</font>
+<font color ="#0000FF">*& Form create_alv_object</font>
+<font color ="#0000FF">*&---------------------------------------------------------------------*</font>
+FORM create_alv_object .
+
+  CREATE OBJECT go_con_0100
+    EXPORTING
+      container_name = 'CCON'.                " Name of the Screen CustCtrl Name to Link Container To
+
+  CREATE OBJECT go_splitter
+    EXPORTING
+      parent  = go_con_0100                  " Parent Container
+      rows    = 1                  " Number of Rows to be displayed
+      columns = 2.                  " Number of Columns to be Displayed
+
+  CALL METHOD go_splitter-&gt;get_container
+    EXPORTING
+      row       = 1                 " Row
+      column    = 1                 " Column
+    RECEIVING
+      container = go_container_l.                 " Container
+
+  CALL METHOD go_splitter-&gt;get_container
+    EXPORTING
+      row       = 1                 " Row
+      column    = 2                 " Column
+    RECEIVING
+      container = go_container_r.                 " Container
+
+  CALL METHOD go_splitter-&gt;set_column_width
+    EXPORTING
+      id    = 1      " 첫 번째 column (좌측)
+      width = 40.
+
+  CALL METHOD go_splitter-&gt;set_column_width
+    EXPORTING
+      id    = 2      " 두 번째 column (우측)
+      width = 60.
+
+  CREATE OBJECT go_grid_0100
+    EXPORTING
+      i_parent = go_container_l.               " Parent Container
+
+  CREATE OBJECT go_grid_r
+    EXPORTING
+      i_parent = go_container_r.                " Parent Container
+
+ENDFORM.
+<font color ="#0000FF">*&---------------------------------------------------------------------*</font>
+<font color ="#0000FF">*& Form set_alv_layout</font>
+<font color ="#0000FF">*&---------------------------------------------------------------------*</font>
+FORM set_alv_layout .
+
+  " left
+  CLEAR gs_layout.
+
+  gs_layout-sel_mode = 'D'.  " 한 줄만 선택
+  gs_layout-zebra = abap_on.
+  gs_layout-grid_title = | { sy-datum+0(4) }년도 손익계산서|.
+  gs_layout-cwidth_opt = abap_on.
+  gs_layout-info_fname = 'ROW_COLOR'.
+
+  gs_variant-report = sy-cprog.
+  gs_variant-handle = 'Z100'.
+  gv_save           = 'A'.
+
+  " right
+  CLEAR gs_layout_r.
+  gs_layout_r-sel_mode = 'D'.
+  gs_layout_r-zebra = abap_on.
+
+  gs_variant_r-report = sy-cprog.
+  gs_variant_r-handle = 'Y100'.
+  gv_save_r = 'A'.
+
+ENDFORM.
+<font color ="#0000FF">*&---------------------------------------------------------------------*</font>
+<font color ="#0000FF">*& Form set_alv_fieldcat</font>
+<font color ="#0000FF">*&---------------------------------------------------------------------*</font>
+FORM set_alv_fieldcat .
+
+  REFRESH gt_field_cat.
+
+  " 1. 항목명 (과목명)
+  CLEAR gs_field_cat.
+  gs_field_cat-fieldname = 'ITEM_TEXT'.
+  gs_field_cat-coltext   = '과목'(f01).
+  gs_field_cat-outputlen = 40.
+  gs_field_cat-key       = 'X'.
+  APPEND gs_field_cat TO gt_field_cat.
+
+  " 금액
+  CLEAR gs_field_cat.
+  gs_field_cat-fieldname = 'AMOUNT_YEAR'.
+  gs_field_cat-coltext   = '금액' .
+  gs_field_cat-just      = 'R'.
+  gs_field_cat-outputlen = 20.
+  gs_field_cat-currency  = 'KRW'.
+  APPEND gs_field_cat TO gt_field_cat.
+
+  " 누적 이익률 (%)
+  CLEAR gs_field_cat.
+  gs_field_cat-fieldname = 'MARGIN_YEAR_D'.
+  gs_field_cat-coltext   = |매출액 순 이익률|.
+  gs_field_cat-just      = 'R'.
+  gs_field_cat-outputlen = 10.
+  APPEND gs_field_cat TO gt_field_cat.
+
+<font color ="#0000FF">*--------------------------------------------------------------------*</font>
+<font color ="#0000FF">* right</font>
+<font color ="#0000FF">*--------------------------------------------------------------------*</font>
+  REFRESH gt_field_cat_r.
+
+  CALL FUNCTION 'LVC_FIELDCATALOG_MERGE'
+    EXPORTING
+      i_structure_name = 'ZCA_FIT110'
+    CHANGING
+      ct_fieldcat      = gt_field_cat_r.
+
+  CLEAR gs_field_cat.
+  LOOP AT gt_field_cat_r INTO gs_field_cat.
+    CASE gs_field_cat-fieldname.
+      WHEN 'PYEAR' OR 'CATEGORY' OR 'CATEGORY_SORT'.
+        gs_field_cat-no_out = 'X'.
+      WHEN 'DEBIT'.
+        gs_field_cat-cfieldname = 'WAERS'.
+        gs_field_cat-coltext = '차변 금액'.
+        gs_field_cat-do_sum = 'X'.
+        gs_field_cat-outputlen = 15.
+
+      WHEN 'CREDIT'.
+        gs_field_cat-cfieldname = 'WAERS'.
+        gs_field_cat-coltext = '대변 금액'.
+        gs_field_cat-do_sum = 'X'.
+        gs_field_cat-outputlen = 15.
+      WHEN 'BALANCE_DEBIT'.
+        gs_field_cat-cfieldname = 'WAERS'.
+        gs_field_cat-coltext = '차변 잔액'.
+        gs_field_cat-do_sum = 'X'.
+        gs_field_cat-outputlen = 15.
+      WHEN 'BALANCE_CREDIT'.
+        gs_field_cat-cfieldname = 'WAERS'.
+        gs_field_cat-coltext = '대변 잔액'.
+        gs_field_cat-do_sum = 'X'.
+        gs_field_cat-outputlen = 15.
+
+    ENDCASE.
+    MODIFY gt_field_cat_r FROM gs_field_cat.
+  ENDLOOP.
+
+ENDFORM.
+
+<font color ="#0000FF">*&---------------------------------------------------------------------*</font>
+<font color ="#0000FF">*& Form calculate_margins</font>
+<font color ="#0000FF">*&---------------------------------------------------------------------*</font>
+FORM calculate_margins CHANGING ps_summary TYPE ty_profit_summary.
+
+<font color ="#0000FF">* 최종 계산</font>
+
+  " 1. 매출총이익 = 매출 - 매출원가
+  ps_summary-gross_profit = ps_summary-sales - ps_summary-cogs.
+  " 2. 영업이익 = 매출총이익 - 판관비
+  ps_summary-operating_profit = ps_summary-gross_profit - ps_summary-sga.
+  " 3. 법인세비용차감전순이익 = 영업이익 + 영업외수익 - 영업외비용
+  ps_summary-pre_tax_income = ps_summary-operating_profit + ps_summary-nonop_income - ps_summary-nonop_expense.
+  " 4. 당기순이익 = 법인세비용차감전순이익 - 법인세비용
+  ps_summary-net_income = ps_summary-pre_tax_income - ps_summary-income_tax.
+
+  " 이익률 계산
+  IF ps_summary-sales &lt;&gt; 0.
+    ps_summary-net_margin = ( ps_summary-net_income / ps_summary-sales ) * 100.
+  ELSE.
+    CLEAR: ps_summary-net_margin.
+  ENDIF.
+
+ENDFORM.
+
+<font color ="#0000FF">*&---------------------------------------------------------------------*</font>
+<font color ="#0000FF">*& Form build_display_lines</font>
+<font color ="#0000FF">*&---------------------------------------------------------------------*</font>
+FORM build_display_lines .
+
+  REFRESH gt_profit_display.
+  CLEAR: gs_profit_display.
+
+  " 1. 대분류 항목 (Level 1) 먼저 추가
+  PERFORM add_main_line USING
+      1 'I.    매출액'(m01)
+      gs_year_summary-sales
+      0.
+
+  " 관련 세부항목 추가
+  PERFORM add_item_line USING 4. " 4 = 수익
+
+  PERFORM add_main_line USING
+      1 'II.   매출원가'(m02)
+      gs_year_summary-cogs
+      0.
+
+  " 관련 세부항목 추가
+  PERFORM add_item_line USING 5. " 5 = 비용
+
+  PERFORM add_main_line USING
+      1 'III.  매출총이익'(m03)
+      gs_year_summary-gross_profit
+      0.
+
+<font color ="#0000FF">*-- 이 아래로는 item이 없음 .. --*</font>
+  PERFORM add_main_line USING
+      1 'IV.   판매비와관리비'(m04)
+      gs_year_summary-sga
+      0.
+
+  PERFORM add_main_line USING
+      1 'V.    영업이익'(m05)
+      gs_year_summary-operating_profit
+      0.
+
+  PERFORM add_main_line USING
+      1 'VI.   영업외수익'(m06)
+      gs_year_summary-nonop_income
+      0.
+
+  PERFORM add_main_line USING
+      1 'VII.  영업외비용'(m07)
+      gs_year_summary-nonop_expense
+      0.
+
+  PERFORM add_main_line USING
+      1 'VIII. 법인세비용차감전순이익'(m08)
+      gs_year_summary-pre_tax_income
+      0.
+
+  PERFORM add_main_line USING
+      1 'IX.   법인세비용'(m09)
+      gs_year_summary-income_tax
+      0.
+
+  PERFORM add_main_line USING
+      1 'X.    당기순이익'(m10)
+      gs_year_summary-net_income
+      gs_year_summary-net_margin.
+
+ENDFORM.
+<font color ="#0000FF">*&---------------------------------------------------------------------*</font>
+<font color ="#0000FF">*& Form add_main_line</font>
+<font color ="#0000FF">*&---------------------------------------------------------------------*</font>
+FORM add_main_line
+  USING
+    VALUE(iv_level)
+    VALUE(iv_text)
+    VALUE(iv_amt_year)
+    VALUE(iv_margin_year).
+
+  CLEAR gs_profit_display.
+
+  gs_profit_display-level = iv_level.
+  gs_profit_display-item_text = iv_text.
+  gs_profit_display-amount_year  = iv_amt_year.
+
+  IF iv_text = TEXT-m03 OR
+     iv_text = TEXT-m05 OR
+     iv_text = TEXT-m08 OR
+     iv_text = TEXT-m10.
+
+    gs_profit_display-margin_year  = iv_margin_year.
+    PERFORM make_display_percentage USING iv_margin_year CHANGING gs_profit_display-margin_year_d.
+
+  ENDIF.
+
+  APPEND gs_profit_display TO gt_profit_display.
+
+ENDFORM.
+
+<font color ="#0000FF">*&---------------------------------------------------------------------*</font>
+<font color ="#0000FF">*& Form set_alv_event_0100</font>
+<font color ="#0000FF">*&---------------------------------------------------------------------*</font>
+FORM set_alv_event_0100 .
+
+  SET HANDLER lcl_event_handler=&gt;on_alv_double_click FOR go_grid_0100.
+
+ENDFORM.
+<font color ="#0000FF">*&---------------------------------------------------------------------*</font>
+<font color ="#0000FF">*& Form set_alv_table_for_display</font>
+<font color ="#0000FF">*&---------------------------------------------------------------------*</font>
+FORM set_alv_table_for_display .
+
+  CALL METHOD go_grid_0100-&gt;set_table_for_first_display
+    EXPORTING
+      is_variant      = gs_variant
+      is_layout       = gs_layout
+      i_save          = gv_save
+    CHANGING
+      it_fieldcatalog = gt_field_cat
+      it_outtab       = gt_profit_display.
+
+  CALL METHOD go_grid_r-&gt;set_table_for_first_display
+    EXPORTING
+      i_structure_name = 'ZCA_FIT110'                 " Internal Output Table Structure Name
+      is_variant       = gs_variant_r                 " Layout
+      i_save           = gv_save_r                  " Save Layout
+      is_layout        = gs_layout_r                 " Layout
+    CHANGING
+      it_outtab        = gt_gl_detail                  " Output Table
+      it_fieldcatalog  = gt_field_cat_r.                " Field Catalog
+ENDFORM.
+<font color ="#0000FF">*&---------------------------------------------------------------------*</font>
+<font color ="#0000FF">*& Form set_alv_design</font>
+<font color ="#0000FF">*&---------------------------------------------------------------------*</font>
+FORM set_alv_design .
+
+  DATA ls_color TYPE lvc_s_scol.
+  LOOP AT gt_profit_display INTO gs_profit_display.
+
+
+    IF gs_profit_display-level = 1.
+      CASE gs_profit_display-item_text.
+        WHEN TEXT-m03 OR TEXT-m05 OR TEXT-m08 OR TEXT-m10.
+          " 연두색 (light green) 색 적용
+          gs_profit_display-row_color = 'C300'.
+        WHEN OTHERS.
+          gs_profit_display-row_color = 'C110'.
+
+          " 이익률 없애기
+          CLEAR: gs_profit_display-margin_year.
+      ENDCASE.
+    ELSE.
+      " 들여쓰기 (item_text 앞에 공백)
+      gs_profit_display-row_color = 'C011'.
+      gs_profit_display-item_text = |     {  gs_profit_display-item_text }|.
+      CLEAR: gs_profit_display-margin_year.
+    ENDIF.
+
+
+    MODIFY gt_profit_display FROM gs_profit_display.
+
+  ENDLOOP.
+
+ENDFORM.
+
+<font color ="#0000FF">*&---------------------------------------------------------------------*</font>
+<font color ="#0000FF">*& Form add_item_line</font>
+<font color ="#0000FF">*&---------------------------------------------------------------------*</font>
+FORM add_item_line  USING    p_category_sort.
+
+  CLEAR : gs_fit110, gs_profit_display.
+  DATA: lv_amount TYPE zca_dmbtr VALUE 0.
+
+  DATA: lv_gl_acc      TYPE zca_fit110-saknr,
+        lv_gl_acc_last TYPE zca_fit110-saknr.
+
+  SORT gt_fit110 BY saknr pyear pmonth pweek.
+
+  LOOP AT gt_fit110 INTO gs_fit110 WHERE category_sort = p_category_sort.
+
+    " G/L 계정이 바뀌면 새로 시작
+    IF lv_gl_acc IS INITIAL.
+      lv_gl_acc = gs_fit110-saknr.
+    ENDIF.
+
+    " gl 계정이 달라지면 -&gt; 새로운 라인 !
+    IF lv_gl_acc &lt;&gt; gs_fit110-saknr.
+
+      " 이전 계정에 대해 APPEND
+      gs_profit_display-level = 2.
+      gs_profit_display-item_text = lv_gl_acc_last.
+      gs_profit_display-amount_year = lv_amount.
+      APPEND gs_profit_display TO gt_profit_display.
+
+      " 초기화
+      CLEAR: gs_profit_display, lv_amount.
+
+      lv_gl_acc = gs_fit110-saknr.
+    ENDIF.
+
+    " 현재 처리
+    gs_profit_display-level = 2.
+    gs_profit_display-item_text = gs_fit110-gltxt.
+
+    " 이번년도 누적
+    lv_amount = lv_amount + gs_fit110-balance_debit + gs_fit110-balance_credit.
+    lv_gl_acc_last = gs_fit110-gltxt. " gl 계정 바뀌는지 확인을 위한 것
+
+  ENDLOOP.
+
+  " 마지막 계정 처리
+  IF lv_gl_acc IS NOT INITIAL.
+    gs_profit_display-level = 2.
+    gs_profit_display-item_text = lv_gl_acc_last.
+    gs_profit_display-amount_year = lv_amount.
+    APPEND gs_profit_display TO gt_profit_display.
+  ENDIF.
+
+ENDFORM.
+<font color ="#0000FF">*&---------------------------------------------------------------------*</font>
+<font color ="#0000FF">*& Form make_display_percentage</font>
+<font color ="#0000FF">*&---------------------------------------------------------------------*</font>
+FORM make_display_percentage  USING    pv_margin
+                              CHANGING pv_display.
+
+  IF pv_margin = 0.
+    pv_display = ''.
+  ELSE.
+    pv_display = |{ pv_margin }%|.
+  ENDIF.
+
+ENDFORM.
+
+<font color ="#0000FF">*--------------------------------------------------------------------*</font>
+<font color ="#0000FF">* Form show_gl_ledger</font>
+<font color ="#0000FF">*--------------------------------------------------------------------*</font>
+FORM show_gl_ledger USING pv_saknr TYPE zca_saknr.
+
+  zca_fit110-saknr = pv_saknr.
+  SELECT SINGLE txt20 INTO zca_fit110-gltxt
+     FROM zca_fiv010v WHERE saknr EQ pv_saknr.
+
+  CLEAR gt_gl_detail.
+  REFRESH gt_gl_detail.
+
+  LOOP AT gt_fit110 INTO DATA(ls_fit)
+    WHERE saknr = pv_saknr.
+
+    APPEND ls_fit TO gt_gl_detail.
+
+  ENDLOOP.
+
+  " ALV 갱신
+  go_grid_r-&gt;refresh_table_display( ).
+  LEAVE TO SCREEN 0100.
+
+ENDFORM.
+</pre>
+<hr>
+<font size="2" face = "Sans Serif">Extracted by Direct Download Enterprise version 1.3.1 - E.G.Mellodew. 1998-2005 UK. Sap Release 758
+</font>
+</body>
+</html>

@@ -1,0 +1,78 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 3.2//EN">
+<html>
+<head>
+<title>ZCA_FI140_PAI</title>
+</head>
+<body bgcolor="#FFFFE0">
+<font size="3" face = "Arial" color="#000000"><b>Code listing for: ZCA_FI140_PAI</b></font>
+<br>
+<font size="3" face = "Arial" color="#000000"><b>Description:  PAI</b></font>
+<hr>
+<pre width="100">
+<font color ="#0000FF">*&---------------------------------------------------------------------*</font>
+<font color ="#0000FF">*& Include          ZCA_FI140_PAI</font>
+<font color ="#0000FF">*&---------------------------------------------------------------------*</font>
+<font color ="#0000FF">*&---------------------------------------------------------------------*</font>
+<font color ="#0000FF">*&      Module  EXIT  INPUT</font>
+<font color ="#0000FF">*----------------------------------------------------------------------*</font>
+MODULE exit INPUT.
+
+  CASE ok_code.
+    WHEN 'EXIT'.
+      LEAVE PROGRAM.
+    WHEN 'CANC'.
+      LEAVE TO SCREEN 0.
+  ENDCASE.
+
+ENDMODULE.
+<font color ="#0000FF">*&---------------------------------------------------------------------*</font>
+<font color ="#0000FF">*&      Module  USER_COMMAND_0100  INPUT</font>
+<font color ="#0000FF">*----------------------------------------------------------------------*</font>
+MODULE user_command_0100 INPUT.
+
+  CASE ok_code.
+    WHEN 'BACK'.
+      LEAVE TO SCREEN 0.
+
+<font color ="#0000FF">*    WHEN 'CREATE'.</font>
+<font color ="#0000FF">*</font>
+<font color ="#0000FF">*      DATA lv_answer TYPE c.</font>
+<font color ="#0000FF">*</font>
+<font color ="#0000FF">*      CALL FUNCTION 'POPUP_TO_CONFIRM_STEP'</font>
+<font color ="#0000FF">*        EXPORTING</font>
+<font color ="#0000FF">*          defaultoption = 'Y'              " Positioning the cursor on answer yes or no</font>
+<font color ="#0000FF">*          textline1     = '전표를 생성하시겠습니까?'              " second line of dialog box</font>
+<font color ="#0000FF">*          titel         = '전표 생성'                   " Display cancel button</font>
+<font color ="#0000FF">*        IMPORTING</font>
+<font color ="#0000FF">*          answer        = lv_answer.         " selected answer of end user</font>
+<font color ="#0000FF">*</font>
+<font color ="#0000FF">*      IF lv_answer = 'J'. " Yes 선택 시</font>
+<font color ="#0000FF">*        MESSAGE '전표가 정상적으로 생성되었습니다.' TYPE 'I'.</font>
+<font color ="#0000FF">*        PERFORM set_alv_table_for_display_0100.</font>
+<font color ="#0000FF">*</font>
+<font color ="#0000FF">*      ELSE. " No 선택 시</font>
+<font color ="#0000FF">*        MESSAGE '취소되었습니다.' TYPE 'S'.</font>
+<font color ="#0000FF">*      ENDIF.</font>
+
+    WHEN 'PRO'. " 반제처리 클릭 시
+        MESSAGE '고객원장으로 이동.' TYPE 'I'.
+<font color ="#0000FF">*        PERFORM create_docu_dz.</font>
+          gv_bukrs = gs_fit040-bukrs.
+          gv_gjahr = gs_fit040-gjahr.
+          gr_belnr = VALUE #( ( sign = 'I' option = 'EQ' low = gs_fit040-belnr ) ).
+
+        SUBMIT ZCA_FI050
+          WITH pa_bukrs = gv_bukrs
+          with pa_gjahr = gv_gjahr
+          with so_belnr in gr_belnr
+          AND RETURN.
+
+  ENDCASE.
+
+ENDMODULE.
+</pre>
+<hr>
+<font size="2" face = "Sans Serif">Extracted by Direct Download Enterprise version 1.3.1 - E.G.Mellodew. 1998-2005 UK. Sap Release 758
+</font>
+</body>
+</html>

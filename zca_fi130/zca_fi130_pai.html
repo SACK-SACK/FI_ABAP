@@ -1,0 +1,65 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 3.2//EN">
+<html>
+<head>
+<title>ZCA_FI130_PAI</title>
+</head>
+<body bgcolor="#FFFFE0">
+<font size="3" face = "Arial" color="#000000"><b>Code listing for: ZCA_FI130_PAI</b></font>
+<br>
+<font size="3" face = "Arial" color="#000000"><b>Description:  Include ZCA_FI130_PAI</b></font>
+<hr>
+<pre width="100">
+<font color ="#0000FF">*&---------------------------------------------------------------------*</font>
+<font color ="#0000FF">*& Include          ZCA_FI130_PAI</font>
+<font color ="#0000FF">*&---------------------------------------------------------------------*</font>
+<font color ="#0000FF">*&---------------------------------------------------------------------*</font>
+<font color ="#0000FF">*&      Module  EXIT  INPUT</font>
+<font color ="#0000FF">*&---------------------------------------------------------------------*</font>
+MODULE exit INPUT.
+
+  CASE ok_code.
+    WHEN 'EXIT'.
+      LEAVE PROGRAM.
+    WHEN 'CANC'.
+      LEAVE TO SCREEN 0.
+  ENDCASE.
+
+ENDMODULE.
+
+<font color ="#0000FF">*&---------------------------------------------------------------------*</font>
+<font color ="#0000FF">*&      Module  USER_COMMAND_0100  INPUT</font>
+<font color ="#0000FF">*&---------------------------------------------------------------------*</font>
+MODULE user_command_0100 INPUT.
+
+  CASE ok_code.
+    WHEN 'BACK'.
+      LEAVE TO SCREEN 0.
+
+    WHEN 'REFRESH'. " 새로고침
+      LEAVE TO SCREEN 0100. " 다시 화면 호출
+
+    WHEN 'REQ'.        " 송장 승인 요청 버튼
+      " 승인을 요청하겠습니까? 같은 팝업창을 생성하기 -&gt; 예 / 아니오
+      PERFORM request_accept.
+
+    WHEN 'SAVE' . " 반제처리
+      MESSAGE i431.   " 채무 관리 프로그램으로 넘어갑니다.
+      IF icon_flag EQ 2.
+
+        " 다음 화면으로 넘어간다. (채무 관리 프로그램으로) -&gt; 이때 전표 번호를 같이 넘겨주기
+        SUBMIT zca_fi110
+<font color ="#0000FF">*          WITH pa_bukrs = gv_bukrs</font>
+<font color ="#0000FF">*          WITH pa_gjahr = gv_gjahr</font>
+<font color ="#0000FF">*          WITH so_lifnr = gs_rbkp-ltfnr</font>
+          AND RETURN .
+      ENDIF.
+
+  ENDCASE.
+
+ENDMODULE.
+</pre>
+<hr>
+<font size="2" face = "Sans Serif">Extracted by Direct Download Enterprise version 1.3.1 - E.G.Mellodew. 1998-2005 UK. Sap Release 758
+</font>
+</body>
+</html>

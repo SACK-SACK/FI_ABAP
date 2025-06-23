@@ -1,0 +1,95 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 3.2//EN">
+<html>
+<head>
+<title>ZCA_FI110</title>
+</head>
+<body bgcolor="#FFFFE0">
+<font size="3" face = "Arial" color="#000000"><b>Code listing for: ZCA_FI110</b></font>
+<br>
+<font size="3" face = "Arial" color="#000000"><b>Description:  [FI] 채무 관리 프로그램(지급처리)</b></font>
+<hr>
+<pre width="100">
+<font color ="#0000FF">*&---------------------------------------------------------------------*</font>
+<font color ="#0000FF">*& Report ZCA_FI110</font>
+<font color ="#0000FF">*&---------------------------------------------------------------------*</font>
+<font color ="#0000FF">*& [FI] 채무 관리 프로그램(지급 처리)</font>
+<font color ="#0000FF">*& 개발자 : 주현정</font>
+<font color ="#0000FF">*& Transaction Program</font>
+<font color ="#0000FF">*&---------------------------------------------------------------------*</font>
+REPORT zca_fi110 MESSAGE-ID zca_msg.
+" 메시지 클래스를 이 프로그램에서 기본적으로 사용하겠다고 지정하기
+
+<font color ="#0000FF">*--------------------------------------------------------------------*</font>
+<font color ="#0000FF">* 선언부</font>
+<font color ="#0000FF">*--------------------------------------------------------------------*</font>
+include <a href ="zca_fi110_top.html">zca_fi110_top</a>.   " 전역변수, 타입, 상수 등 선언
+include <a href ="zca_fi110_scr.html">zca_fi110_scr</a>.   " Selection Screen
+include <a href ="zca_fi110_cls.html">zca_fi110_cls</a>.   " Local Class 정의 구현
+
+<font color ="#0000FF">*--------------------------------------------------------------------*</font>
+<font color ="#0000FF">* 구현부</font>
+<font color ="#0000FF">*--------------------------------------------------------------------*</font>
+include <a href ="zca_fi110_pbo.html">zca_fi110_pbo</a>.
+include <a href ="zca_fi110_pai.html">zca_fi110_pai</a>.
+include <a href ="zca_fi110_f01.html">zca_fi110_f01</a>.
+
+<font color ="#0000FF">*--------------------------------------------------------------------*</font>
+<font color ="#0000FF">* ABAP Event</font>
+<font color ="#0000FF">*--------------------------------------------------------------------*</font>
+INITIALIZATION.
+
+AT SELECTION-SCREEN.
+
+START-OF-SELECTION.
+  PERFORM select_data.      " data 가져오기
+  PERFORM make_display_data. " data 수정하기
+  PERFORM display_data.     " data 보여주기 &gt; 0100 screen
+
+<font color ="#0000FF">*GUI Texts</font>
+<font color ="#0000FF">*----------------------------------------------------------</font>
+<font color ="#0000FF">* T0100 --&gt; [FI] 채무 관리 프로그램(지급처리)</font>
+<font color ="#0000FF">* T0130 --&gt; 지급처리</font>
+
+<font color ="#0000FF">*Text elements</font>
+<font color ="#0000FF">*----------------------------------------------------------</font>
+<font color ="#0000FF">* A01 Total:</font>
+<font color ="#0000FF">* A02 7일 이후:</font>
+<font color ="#0000FF">* A03 7일 이내:</font>
+<font color ="#0000FF">* A04 지급경과:</font>
+<font color ="#0000FF">* A06 공급업체 전표(KA)</font>
+<font color ="#0000FF">* A07 공급업체 지급(KZ)</font>
+<font color ="#0000FF">* F01 지급 상태</font>
+<font color ="#0000FF">* F02 지급 마감 일자</font>
+<font color ="#0000FF">* T01 벤더 원장 조건</font>
+<font color ="#0000FF">* T02 지급처리를 진행하시겠습니까?</font>
+<font color ="#0000FF">* T03 예</font>
+<font color ="#0000FF">* T04 아니오</font>
+
+
+<font color ="#0000FF">*Selection texts</font>
+<font color ="#0000FF">*----------------------------------------------------------</font>
+<font color ="#0000FF">* PA_BUKRS D       .</font>
+<font color ="#0000FF">* PA_GJAHR D       .</font>
+<font color ="#0000FF">* SO_BELNR D       .</font>
+<font color ="#0000FF">* SO_BUDAT         전기일자</font>
+<font color ="#0000FF">* SO_ITNUM D       .</font>
+<font color ="#0000FF">* SO_LIFNR D       .</font>
+
+
+<font color ="#0000FF">*Messages</font>
+<font color ="#0000FF">*----------------------------------------------------------</font>
+<font color ="#0000FF">*</font>
+<font color ="#0000FF">* Message class: ZCA_MSG</font>
+<font color ="#0000FF">*428   일반 데이터행만 클릭해주세요.</font>
+<font color ="#0000FF">*429   선택한 데이터를 찾을 수 없습니다.</font>
+<font color ="#0000FF">*437   선택된 행이 없습니다.</font>
+<font color ="#0000FF">*438   집계 행은 선택할 수 없습니다.</font>
+<font color ="#0000FF">*439   서로 다른 벤더코드가 선택되었습니다. 동일한 벤더만 처리 가능합니다.</font>
+<font color ="#0000FF">*449   미결건 &건에 대해 지급을 성공하였습니다.</font>
+<font color ="#0000FF">*462   계좌를 반드시 선택해주세요.</font>
+</pre>
+<hr>
+<font size="2" face = "Sans Serif">Extracted by Direct Download Enterprise version 1.3.1 - E.G.Mellodew. 1998-2005 UK. Sap Release 758
+</font>
+</body>
+</html>

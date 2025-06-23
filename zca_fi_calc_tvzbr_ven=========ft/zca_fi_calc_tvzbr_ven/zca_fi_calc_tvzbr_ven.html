@@ -1,0 +1,58 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 3.2//EN">
+<html>
+<head>
+<title>ZCA_FI_CALC_TVZBR_VEN</title>
+</head>
+<body bgcolor="#FFFFE0">
+<font size="3" face = "Arial" color="#000000"><b>Code listing for function: ZCA_FI_CALC_TVZBR_VEN</b></font>
+<br>
+<font size="3" face = "Arial" color="#000000"><b>Description:  벤더 지급일자 계산</b></font>
+<hr>
+<pre width="100">
+FUNCTION zca_fi_calc_tvzbr_ven.
+<font color ="#0000FF">*"----------------------------------------------------------------------</font>
+<font color ="#0000FF">*"*"Local Interface:</font>
+<font color ="#0000FF">*"  IMPORTING</font>
+<font color ="#0000FF">*"     REFERENCE(IV_LIFNR) TYPE  ZCA_VENCODE</font>
+<font color ="#0000FF">*"     REFERENCE(IV_DATE) TYPE  ZCA_BUDAT</font>
+<font color ="#0000FF">*"  EXPORTING</font>
+<font color ="#0000FF">*"     REFERENCE(EV_TVZBR_DATE) TYPE  ZCA_BUDAT</font>
+<font color ="#0000FF">*"----------------------------------------------------------------------</font>
+
+<font color ="#0000FF">*       <a href ="global-zca_fi_calc_tvzbr_ven.html">Global data declarations</a></font>
+
+  " 변수 선언
+  DATA gv_zlsch TYPE zca_lfa1-zlsch. " 지급코드
+  DATA gs_tvzbr TYPE zca_tvzbr. " 지급코드 wa
+
+
+  " 해당하는 벤더의 지급코드를 가지고 온다.
+  SELECT SINGLE zlsch FROM zca_lfa1
+    INTO gv_zlsch
+    WHERE lifnr EQ iv_lifnr.
+
+  " 지급에 대한 지급코드인지 확인 (1로 시작)
+  IF gv_zlsch = '11' OR gv_zlsch = '12' OR gv_zlsch = '13'.
+
+    " 여기서 구한 거를 이용해서 지급코드 테이블에서 구체적인 지급코드 내용을 가지고 온다.
+    SELECT SINGLE * FROM zca_tvzbr
+      INTO gs_tvzbr
+      WHERE zlsch EQ gv_zlsch.
+
+    DATA lv_date TYPE zca_budat.
+    IF sy-subrc EQ 0.
+      IF iv_date IS INITIAL.
+        lv_date = sy-datum.
+      ELSE. lv_date = iv_date.
+      ENDIF.
+      ev_tvzbr_date = lv_date + gs_tvzbr-duedate. " 전달된 date + duedate
+    ENDIF.
+  ENDIF.
+
+ENDFUNCTION.
+</pre>
+<hr>
+<font size="2" face = "Sans Serif">Extracted by Direct Download Enterprise version 1.3.1 - E.G.Mellodew. 1998-2005 UK. Sap Release 758
+</font>
+</body>
+</html>

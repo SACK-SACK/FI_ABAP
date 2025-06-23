@@ -1,0 +1,348 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 3.2//EN">
+<html>
+<head>
+<title>ZCA_FI030_PBO</title>
+</head>
+<body bgcolor="#FFFFE0">
+<font size="3" face = "Arial" color="#000000"><b>Code listing for: ZCA_FI030_PBO</b></font>
+<br>
+<font size="3" face = "Arial" color="#000000"><b>Description:  PBO</b></font>
+<hr>
+<pre width="100">
+<font color ="#0000FF">*&---------------------------------------------------------------------*</font>
+<font color ="#0000FF">*& Include          ZCA_FI030_PBO</font>
+<font color ="#0000FF">*&---------------------------------------------------------------------*</font>
+<font color ="#0000FF">*&---------------------------------------------------------------------*</font>
+<font color ="#0000FF">*& Module STATUS_0100 OUTPUT</font>
+<font color ="#0000FF">*&---------------------------------------------------------------------*</font>
+MODULE status_0100 OUTPUT.
+  SET PF-STATUS 'S0100'.
+  SET TITLEBAR 'T0100'.  " [FI] 임시 전표 검토 프로그램
+ENDMODULE.
+<font color ="#0000FF">*&---------------------------------------------------------------------*</font>
+<font color ="#0000FF">*& Module CLEAR_OK_CODE OUTPUT</font>
+<font color ="#0000FF">*&---------------------------------------------------------------------*</font>
+MODULE clear_ok_code OUTPUT.
+
+  CLEAR ok_code.
+
+ENDMODULE.
+<font color ="#0000FF">*&---------------------------------------------------------------------*</font>
+<font color ="#0000FF">*& Module INIT_ALV_0100 OUTPUT</font>
+<font color ="#0000FF">*&---------------------------------------------------------------------*</font>
+MODULE init_alv_0100 OUTPUT.
+
+  IF go_container_0100 IS INITIAL.
+
+    " Container와 ALV 생성
+    PERFORM create_screen_obj USING go_container_0100
+                                    go_alv_grid_0100
+                                    'CCON_0100'.
+
+    " ALV Layout 설정
+    PERFORM set_alv_layout_0100.
+
+    PERFORM set_alv_field_cat.
+
+    PERFORM set_handler_0100.
+
+    " 값 설정
+    PERFORM set_alv_table_for_display USING gt_fit070
+                                            go_alv_grid_0100
+                                            'ZCA_FIT070'
+                                             gs_layout_0100
+                                             gs_variant_0100
+                                             gv_save_0100
+                                             gt_field_cat_0100.
+
+<font color ="#0000FF">*       CALL METHOD go_alv_grid_0100-&gt;set_table_for_first_display</font>
+<font color ="#0000FF">*    EXPORTING</font>
+<font color ="#0000FF">*      i_structure_name = 'ZCA_FIT070'    " Internal Output Table Structure Name</font>
+<font color ="#0000FF">**     is_variant       = gs_variant_1     " Layout</font>
+<font color ="#0000FF">*      i_save           = gs_save_1        " Save Layout</font>
+<font color ="#0000FF">*      is_layout        = gs_layout_1      " Layout</font>
+<font color ="#0000FF">*    CHANGING</font>
+<font color ="#0000FF">*      it_outtab        = gt_fit070.      " Output Table</font>
+<font color ="#0000FF">**      it_fieldcatalog               =                  " Field Catalog</font>
+<font color ="#0000FF">**      it_sort                       =                  " Sort Criteria</font>
+<font color ="#0000FF">*</font>
+<font color ="#0000FF">*</font>
+<font color ="#0000FF">*    PERFORM set_alv_table_for_display_0100.</font>
+
+  ELSE.
+
+    go_alv_grid_0100-&gt;refresh_table_display( ).
+
+  ENDIF.
+
+
+
+ENDMODULE.
+<font color ="#0000FF">*&---------------------------------------------------------------------*</font>
+<font color ="#0000FF">*& Module FILL_DYNNR OUTPUT</font>
+<font color ="#0000FF">*&---------------------------------------------------------------------*</font>
+MODULE fill_dynnr OUTPUT.
+<font color ="#0000FF">* Tabstrip에서 현재 활성화되어 있는 탭에 해당하는 화면을 보여주기 위해 조건문 사용</font>
+  CASE my_tabstrip-activetab.
+
+    WHEN 'FC1'. " 첫 번째 탭의 Function Code = FC1
+      dynnr = '0110'.
+
+    WHEN 'FC2'. " 두 번째 탭의 Function Code = FC2
+      dynnr = '0120'.
+
+    WHEN OTHERS . " 모두 해당되지 않으면 초기값 설정
+      dynnr = '0110'.                " 화면에 110번 서브스크린이 보이도록 한다.
+      my_tabstrip-activetab = 'FC1'. " 첫번째 탭을 활성화 탭으로 취급
+
+  ENDCASE.
+
+ENDMODULE.
+<font color ="#0000FF">*&---------------------------------------------------------------------*</font>
+<font color ="#0000FF">*& Module INIT_ALV_0110 OUTPUT</font>
+<font color ="#0000FF">*&---------------------------------------------------------------------*</font>
+MODULE init_alv_0110 OUTPUT.
+
+  IF go_container_0110 IS INITIAL.
+
+    PERFORM create_screen_obj  USING go_container_0110
+                                     go_alv_grid_0110
+                                     'CCON_0110'.
+    " layout 설정 (0110화면)
+    PERFORM set_alv_layout_0110.
+
+<font color ="#0000FF">*    PERFORM set_alv_layout.</font>
+
+    PERFORM set_alv_field_cat.
+
+    PERFORM set_handler_0110.
+
+    " 값 설정
+    PERFORM set_alv_table_for_display USING gt_before
+                                            go_alv_grid_0110
+                                            'ZCA_FIT060'
+                                             gs_layout_0110
+                                             gs_variant_0110
+                                             gv_save_0110
+                                             gt_field_cat_0110.
+
+  ELSE.
+
+    go_alv_grid_0110-&gt;refresh_table_display( ).
+
+  ENDIF.
+
+ENDMODULE.
+<font color ="#0000FF">*&---------------------------------------------------------------------*</font>
+<font color ="#0000FF">*& Module INIT_ALV_0120 OUTPUT</font>
+<font color ="#0000FF">*&---------------------------------------------------------------------*</font>
+MODULE init_alv_0120 OUTPUT.
+
+  IF go_container_0120 IS INITIAL.
+
+    PERFORM create_screen_obj  USING go_container_0120
+                                     go_alv_grid_0120
+                                     'CCON_0120'.
+    PERFORM set_alv_layout_0120.
+
+    PERFORM set_alv_field_cat.
+
+    PERFORM set_handler_0120.
+
+    " 값 설정
+    PERFORM set_alv_table_for_display USING gt_after
+                                            go_alv_grid_0120
+                                            'ZCA_FIT060'
+                                             gs_layout_0120
+                                             gs_variant_0120
+                                             gv_save_0120
+                                             gt_field_cat_0120.
+
+  ELSE.
+
+    go_alv_grid_0120-&gt;refresh_table_display( ).
+
+  ENDIF.
+
+ENDMODULE.
+<font color ="#0000FF">*&---------------------------------------------------------------------*</font>
+<font color ="#0000FF">*& Module SET_INIT OUTPUT</font>
+<font color ="#0000FF">*&---------------------------------------------------------------------*</font>
+MODULE set_init OUTPUT.
+
+  zca_Fit060-gjahr = pa_year.
+  zca_fit060-bukrs = pa_bukrs.
+  zca_fit060-belnr = so_belnr.
+  zca_fit060-budat = so_budat-low.
+
+ENDMODULE.
+<font color ="#0000FF">*&---------------------------------------------------------------------*</font>
+<font color ="#0000FF">*& Module STATUS_0130 OUTPUT</font>
+<font color ="#0000FF">*&---------------------------------------------------------------------*</font>
+MODULE status_0130 OUTPUT.
+  SET PF-STATUS '0130'.
+  SET TITLEBAR 'T0130'. " 임시전표 생성
+
+  zca_fit070-bukrs = zca_fit060-bukrs.
+ENDMODULE.
+<font color ="#0000FF">*&---------------------------------------------------------------------*</font>
+<font color ="#0000FF">*& Module STATUS_0140 OUTPUT</font>
+<font color ="#0000FF">*&---------------------------------------------------------------------*</font>
+MODULE status_0140 OUTPUT.
+  SET PF-STATUS 'S0140'.
+  SET TITLEBAR 'T0140'.
+ENDMODULE.
+<font color ="#0000FF">*&---------------------------------------------------------------------*</font>
+<font color ="#0000FF">*& Form set_alv_table_for_display_0110</font>
+<font color ="#0000FF">*&---------------------------------------------------------------------*</font>
+<font color ="#0000FF">*FORM set_alv_table_for_display_0110 .</font>
+<font color ="#0000FF">*</font>
+<font color ="#0000FF">*  CALL METHOD go_alv_grid_0110-&gt;set_table_for_first_display</font>
+<font color ="#0000FF">*    EXPORTING</font>
+<font color ="#0000FF">*      i_structure_name              =  'ZCA_FIT060'    " Internal Output Table Structure Name</font>
+<font color ="#0000FF">**      is_variant                    =   gs_variant_2     " Layout</font>
+<font color ="#0000FF">*      i_save                        =   gs_save_2        " Save Layout</font>
+<font color ="#0000FF">*      is_layout                     =   gs_layout_2      " Layout</font>
+<font color ="#0000FF">*    CHANGING</font>
+<font color ="#0000FF">*      it_outtab                     =    gt_before      " Output Table</font>
+<font color ="#0000FF">*      it_fieldcatalog               =    gt_field_cat_2.         " Field Catalog</font>
+<font color ="#0000FF">**      it_sort                       =                  " Sort Criteria</font>
+<font color ="#0000FF">*</font>
+<font color ="#0000FF">*ENDFORM.</font>
+<font color ="#0000FF">*&---------------------------------------------------------------------*</font>
+<font color ="#0000FF">*& Module INIT_ALV_0130 OUTPUT</font>
+<font color ="#0000FF">*&---------------------------------------------------------------------*</font>
+MODULE init_alv_0130 OUTPUT.
+
+  " alv 초기 설정
+  IF go_container_0130 IS INITIAL .
+
+    " Container와 ALV 생성
+    PERFORM create_screen_obj USING go_container_0130
+                                    go_alv_grid_0130
+                                    'CCON_130'.
+
+    " ALV Layout 설정
+    PERFORM set_alv_layout_0130.
+
+<font color ="#0000FF">**    " ALV Field Catalog 설정</font>
+<font color ="#0000FF">**    PERFORM set_alv_fieldcat_0130.</font>
+<font color ="#0000FF">**</font>
+<font color ="#0000FF">**    " ALV Event Handler Method 등록</font>
+<font color ="#0000FF">**    PERFORM set_alv_event_0130.</font>
+<font color ="#0000FF">*</font>
+    " 값 설정
+    PERFORM set_alv_table_for_display USING gt_item
+                                            go_alv_grid_0130
+                                            'ZCA_FIT070'
+                                             gs_layout_0130
+                                             gs_variant_0130
+                                             gv_save_0130
+                                             gt_field_cat_0130.
+
+
+<font color ="#0000FF">*      CALL METHOD go_alv_grid_0130-&gt;set_table_for_first_display</font>
+<font color ="#0000FF">*    EXPORTING</font>
+<font color ="#0000FF">*      i_structure_name = 'ZCA_FIT070'    " Internal Output Table Structure Name</font>
+<font color ="#0000FF">*      is_variant       = gs_variant_t       " Layout</font>
+<font color ="#0000FF">*      i_save           = gs_save_t          " Save Layout</font>
+<font color ="#0000FF">*      is_layout        = gs_layout_t        " Layout</font>
+<font color ="#0000FF">*    CHANGING</font>
+<font color ="#0000FF">*      it_outtab        = gt_item       " Output Table</font>
+<font color ="#0000FF">**     it_fieldcatalog  = gt_field_cat     " Field Catalog</font>
+<font color ="#0000FF">**     it_sort          =                  " Sort Criteria</font>
+<font color ="#0000FF">**     it_filter        =                  " Filter Criteria</font>
+<font color ="#0000FF">*    " 값 설정</font>
+<font color ="#0000FF">*    PERFORM set_alv_table_for_display_0130.</font>
+
+  ELSE.
+
+    go_alv_grid_0130-&gt;refresh_table_display( ).
+
+  ENDIF.
+ENDMODULE.
+<font color ="#0000FF">*&---------------------------------------------------------------------*</font>
+<font color ="#0000FF">*& Form set_alv_layout_0130</font>
+<font color ="#0000FF">*&---------------------------------------------------------------------*</font>
+FORM set_alv_layout_0130 .
+
+  CLEAR gs_layout_0130.
+
+  gs_layout_0130-sel_mode = 'A'.   " 선택모드는 셀 단위로 지정
+  gs_layout_0130-zebra = abap_on.   " 얼룩 처리
+  gs_layout_0130-cwidth_opt = abap_on.  " 열 넓이 최적화
+
+  " 저장 가능하도록 설정
+  " 저장 모드 -&gt; 모두 가능
+
+<font color ="#0000FF">* Variant 관련</font>
+  gs_variant_0130-report    = sy-repid. " 저장 가능하도록 설정
+  gs_variant_0130-handle    = '0130'.
+<font color ="#0000FF">*  gs_variant-handle 설정해줘야 함</font>
+  gv_save_0130              = 'A'.
+
+ENDFORM.
+<font color ="#0000FF">*&---------------------------------------------------------------------*</font>
+<font color ="#0000FF">*& Module MARK_REQUIRED_FIELDS OUTPUT</font>
+<font color ="#0000FF">*&---------------------------------------------------------------------*</font>
+MODULE mark_required_fields OUTPUT.
+
+  LOOP AT SCREEN.
+
+    IF gv_header_created NE abap_true. " 헤더 아직
+      IF  screen-name = 'ZCA_FIT060-BLART' OR
+          screen-name = 'ZCA_FIT060-BLTXT' OR
+          screen-name = 'ZCA_FIT060-BUKRS'.
+        screen-required = 1.  " 필수 입력 필드로 표시
+        MODIFY SCREEN.
+      ENDIF.
+
+    ELSE.  " 헤더 생성완
+      IF  screen-name = 'ZCA_TBSL-BSCHL' OR
+          screen-name = 'ZCA_FIT070-SAKNR' OR
+          screen-name = 'ZCA_FIT070-DMBTR'.
+        screen-required = 1.
+        MODIFY SCREEN.
+      ENDIF.
+
+    ENDIF.
+
+  ENDLOOP.
+
+ENDMODULE.
+<font color ="#0000FF">*&---------------------------------------------------------------------*</font>
+<font color ="#0000FF">*& Module STATUS_0150 OUTPUT</font>
+<font color ="#0000FF">*&---------------------------------------------------------------------*</font>
+MODULE status_0150 OUTPUT.
+
+ SET PF-STATUS 'S0150'.
+ SET TITLEBAR 'T0150'. " 승인처리
+
+ENDMODULE.
+<font color ="#0000FF">*&---------------------------------------------------------------------*</font>
+<font color ="#0000FF">*& Module GET_POPUP_DATA OUTPUT</font>
+<font color ="#0000FF">*&---------------------------------------------------------------------*</font>
+MODULE get_popup_data OUTPUT.
+
+  " 관련 전표 헤더를 먼저 가지고 온다.
+  DATA ls_header TYPE zca_fit060.
+  SELECT SINGLE * FROM zca_fit060
+    INTO ls_header
+    WHERE bukrs EQ  gs_popup_data-bukrs
+      AND belnr EQ  gs_popup_data-belnr
+      AND gjahr EQ  gs_popup_data-gjahr.
+
+
+  " 고객 정보
+  SELECT SINGLE * FROM zca_bp000
+    INTO CORRESPONDING FIELDS OF SCREEN0150
+    WHERE PARTNR EQ gv_bpcode.
+
+
+ENDMODULE.
+</pre>
+<hr>
+<font size="2" face = "Sans Serif">Extracted by Direct Download Enterprise version 1.3.1 - E.G.Mellodew. 1998-2005 UK. Sap Release 758
+</font>
+</body>
+</html>

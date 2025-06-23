@@ -1,0 +1,97 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 3.2//EN">
+<html>
+<head>
+<title>ZCA_FI140_TOP</title>
+</head>
+<body bgcolor="#FFFFE0">
+<font size="3" face = "Arial" color="#000000"><b>Code listing for: ZCA_FI140_TOP</b></font>
+<br>
+<font size="3" face = "Arial" color="#000000"><b>Description:  TOP</b></font>
+<hr>
+<pre width="100">
+<font color ="#0000FF">*&---------------------------------------------------------------------*</font>
+<font color ="#0000FF">*& Include          ZCA_FI140_TOP</font>
+<font color ="#0000FF">*&---------------------------------------------------------------------*</font>
+<font color ="#0000FF">* 사용할 테이블</font>
+TABLES : zca_fit040,  " 전표 헤더
+         zca_fit050,  " 전표 아이템
+         zca_sdt120,  " 대금관리 Header
+         zca_sdt130,  " 대금관리 Item
+         zca_sdt030,  " 가격 마스터
+         zca_kna1.
+
+<font color ="#0000FF">**---------------------------------------------------------------------*</font>
+<font color ="#0000FF">** 대금관리, 가격 마스터 Table</font>
+<font color ="#0000FF">**---------------------------------------------------------------------*</font>
+<font color ="#0000FF">* 대금관리 Header</font>
+DATA : gt_sdt120 TYPE TABLE OF zca_sdt120,
+       gs_sdt120 TYPE zca_sdt120.
+
+<font color ="#0000FF">* 대금관리 Item</font>
+DATA : gt_sdt130 TYPE TABLE OF zca_sdt130,
+       gs_sdt130 TYPE zca_sdt130.
+
+<font color ="#0000FF">* 가격 마스터</font>
+DATA : gt_sdt030 TYPE TABLE OF zca_sdt030,
+       gs_sdt030 TYPE ZCA_SDT130.
+
+<font color ="#0000FF">* 외상매출금 계산 : 청구기준금액(원금) + 부가가치세</font>
+DATA gv_money TYPE zca_sdt120-bilamt. " 외상매출금을 담을 변수
+
+<font color ="#0000FF">**---------------------------------------------------------------------*</font>
+<font color ="#0000FF">** 전표</font>
+<font color ="#0000FF">**---------------------------------------------------------------------*</font>
+<font color ="#0000FF">* 전표 Heder</font>
+DATA : gt_fit040 TYPE TABLE OF zca_fit040,
+       gs_FIT040 TYPE zca_fit040.
+
+<font color ="#0000FF">* 전표 Item</font>
+DATA: BEGIN OF GS_FIT050.
+      include structure <a href ="zca_fit050/dictionary-zca_fit050.html">zca_fit050</a>.
+DATA: key_text TYPE zca_bstxt,  " 전기키 텍스트 (예: 차변/대변 설명)
+      debit    TYPE zca_dmbtr,  " 차변 금액
+      credit   TYPE zca_dmbtr,  " 대변 금액
+      END OF gs_fit050.
+DATA gt_fit050 LIKE TABLE OF gs_fit050.
+
+" 다른 화면으로 넘길 데이터
+DATA : gv_bukrs TYPE zca_fit050-bukrs,
+       gv_gjahr TYPE zca_fit050-gjahr,
+       gr_belnr TYPE RANGE OF zca_fit050-belnr.
+<font color ="#0000FF">**---------------------------------------------------------------------*</font>
+<font color ="#0000FF">** Screen 관련 선언</font>
+<font color ="#0000FF">**---------------------------------------------------------------------*</font>
+<font color ="#0000FF">* 화면 및 ALV 출력에 필요한 변수를 선언</font>
+
+DATA OK_CODE TYPE SY-UCOMM. " 뒤로가기, 나가기, 취소하기 등 사용자 액션에 대한 펑션코드값
+
+DATA : INV_NO TYPE zca_sdt120-inv_no,
+       waers1 TYPE zca_sdt120-waers,
+       waers2 TYPE zca_sdt120-waers,
+       waers3 TYPE zca_sdt120-waers,
+       custname TYPE zca_kna1-NAME1. " 나중에 Screen에 띄우기
+<font color ="#0000FF">*---------------------------------------------------------------------*</font>
+<font color ="#0000FF">* ALV관련 선언</font>
+<font color ="#0000FF">*---------------------------------------------------------------------*</font>
+DATA :  go_container       TYPE REF TO cl_gui_custom_container,
+        go_alv_grid       TYPE REF TO cl_gui_alv_grid.
+
+<font color ="#0000FF">* ALV Layout을 다루는 Structure 변수</font>
+DATA GS_LAYOUT TYPE LVC_S_LAYO.
+
+<font color ="#0000FF">* ALV Variant를 다루는 Structure 변수</font>
+DATA : GS_VARIANT TYPE DISVARIANT,
+       GS_SAVE TYPE C.
+
+<font color ="#0000FF">* ALV에 출력할 필드 정보를 구성하고 ALV에게 전달한다.</font>
+DATA: GT_FIELD_CAT TYPE LVC_T_FCAT,
+      GS_FIELD_CAT TYPE LVC_S_FCAT.
+
+DATA: GT_FIELD_CAT_B TYPE LVC_T_FCAT,
+      GS_FIELD_CAT_B TYPE LVC_S_FCAT.
+</pre>
+<hr>
+<font size="2" face = "Sans Serif">Extracted by Direct Download Enterprise version 1.3.1 - E.G.Mellodew. 1998-2005 UK. Sap Release 758
+</font>
+</body>
+</html>

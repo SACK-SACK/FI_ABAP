@@ -1,0 +1,61 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 3.2//EN">
+<html>
+<head>
+<title>MZCA_FI100_TOP</title>
+</head>
+<body bgcolor="#FFFFE0">
+<font size="3" face = "Arial" color="#000000"><b>Code listing for: MZCA_FI100_TOP</b></font>
+<br>
+<font size="3" face = "Arial" color="#000000"><b>Description:  Include MZCA_FI100_TOP</b></font>
+<hr>
+<pre width="100">
+<font color ="#0000FF">*&---------------------------------------------------------------------*</font>
+<font color ="#0000FF">*& Include MZCA_FI100_TOP                           - Module Pool      SAPMZCA_FI100</font>
+<font color ="#0000FF">*&---------------------------------------------------------------------*</font>
+PROGRAM sapmzca_fi100 MESSAGE-ID ZCA_MSG.
+
+TABLES : zca_fit040, zca_fit050, zca_tbsl.  " 헤더 / 아이템 / 전기키
+
+DATA gv_header_created TYPE abap_bool VALUE abap_false.
+" itab + work area
+DATA gt_header TYPE TABLE OF zca_fit040.
+DATA gs_header TYPE zca_fit040.
+
+DATA gt_item TYPE TABLE OF zca_fit050.
+DATA gs_item TYPE zca_fit050.
+
+" ok_code
+DATA ok_code TYPE sy-ucomm.
+
+" Money -&gt; 차 / 대변 금액 + 총 합 금액
+DATA : s_money     LIKE zca_fit050-dmbtr,
+       h_money     LIKE zca_fit050-dmbtr,
+       total_money LIKE zca_fit050-dmbtr.
+
+" Status Icon 을 위한 flag (기본값 0)
+DATA icon_flag TYPE i VALUE 0.
+DATA: st_icon     TYPE icons-text,
+      status_icon TYPE char30,
+      status_text TYPE char30.
+
+<font color ="#0000FF">*DATA : sh_text TYPE string.</font>
+
+<font color ="#0000FF">*--------------------------------------------------------------------*</font>
+<font color ="#0000FF">* ALV</font>
+<font color ="#0000FF">*--------------------------------------------------------------------*</font>
+DATA go_container TYPE REF TO cl_gui_custom_container.
+DATA go_alv_grid TYPE REF TO cl_gui_alv_grid.
+
+DATA gs_layout TYPE lvc_s_layo.
+DATA gs_variant TYPE disvariant.
+DATA gv_save.
+
+<font color ="#0000FF">* ALV Field Catalog</font>
+DATA gt_field_cat TYPE lvc_t_fcat.
+DATA gs_field_cat TYPE lvc_s_fcat.
+</pre>
+<hr>
+<font size="2" face = "Sans Serif">Extracted by Direct Download Enterprise version 1.3.1 - E.G.Mellodew. 1998-2005 UK. Sap Release 758
+</font>
+</body>
+</html>

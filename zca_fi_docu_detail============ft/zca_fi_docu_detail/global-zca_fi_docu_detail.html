@@ -1,0 +1,140 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 3.2//EN">
+<html>
+<head>
+<title>LZCA_FI_FG04TOP</title>
+</head>
+<body bgcolor="#FFFFE0">
+<font size="3" face = "Arial" color="#000000"><b>Code listing for: LZCA_FI_FG04TOP</b></font>
+<br>
+<font size="3" face = "Arial" color="#000000"><b>Description:  전표 헤더별 아이템 보기</b></font>
+<hr>
+<pre width="100">
+FUNCTION-POOL zca_fi_fg04.                  "MESSAGE-ID ..
+
+TABLES : zca_bp000, zca_fit040, zca_tbsl, zca_fit030, zca_rbkp, zca_fit080, zca_sdt120,
+         zca_sdt100, zca_aufk.
+
+DATA ok_code TYPE sy-ucomm.
+
+<font color ="#0000FF">*--------------------------------------------------------------------*</font>
+<font color ="#0000FF">* 공통</font>
+<font color ="#0000FF">*--------------------------------------------------------------------*</font>
+<font color ="#0000FF">*--------------------------------------------------------------------*</font>
+<font color ="#0000FF">* screen 0100 / bp_popup</font>
+<font color ="#0000FF">*--------------------------------------------------------------------*</font>
+DATA : BEGIN OF screen0100,
+         bprole TYPE string,
+       END OF screen0100.
+
+DATA : gt_item TYPE TABLE OF zca_fit050,
+       gs_item TYPE zca_fit050.
+
+DATA : BEGIN OF gs_display_0100.
+         include structure <a href ="zca_fit050/dictionary-zca_fit050.html">zca_fit050</a>.
+DATA :   debit  LIKE zca_fit050-dmbtr,
+         credit LIKE zca_fit050-dmbtr,
+       END OF gs_display_0100.
+DATA gt_display_0100 LIKE TABLE OF gs_display_0100.
+
+DATA : gs_today_date  TYPE zca_date.
+
+<font color ="#0000FF">*--------------------------------------------------------------------*</font>
+<font color ="#0000FF">* screen 0110 / 전표 팝업</font>
+<font color ="#0000FF">*--------------------------------------------------------------------*</font>
+DATA : BEGIN OF gs_display_0110.
+         include structure <a href ="zca_fit050/dictionary-zca_fit050.html">zca_fit050</a>.
+DATA :   debit  LIKE zca_fit050-dmbtr,
+         credit LIKE zca_fit050-dmbtr,
+       END OF gs_display_0110.
+DATA gt_display_0110 LIKE TABLE OF gs_display_0110.
+DATA : BEGIN OF screen_0110,
+         descr       TYPE zca_descr,
+         status_icon TYPE char30 VALUE icon_led_green,
+         status_text TYPE char30 VALUE '반제 완료', " 또는 반제 완료
+       END OF screen_0110.
+
+<font color ="#0000FF">*--------------------------------------------------------------------*</font>
+<font color ="#0000FF">* screen 0130 / 전기키 팝업</font>
+<font color ="#0000FF">*--------------------------------------------------------------------*</font>
+DATA : BEGIN OF screen0130,
+         koart_text TYPE c LENGTH 10,
+         indi       TYPE c LENGTH 5,
+         blart_text TYPE c LENGTH 10,
+       END OF screen0130.
+
+<font color ="#0000FF">*--------------------------------------------------------------------*</font>
+<font color ="#0000FF">* screen 0150 / 송장 팝업</font>
+<font color ="#0000FF">*--------------------------------------------------------------------*</font>
+DATA : BEGIN OF screen0150,
+         waers1 TYPE zca_waers,
+         waers2 TYPE zca_waers,
+       END OF screen0150.
+
+<font color ="#0000FF">*--------------------------------------------------------------------*</font>
+<font color ="#0000FF">* screen 0160 / 청구서 팝업</font>
+<font color ="#0000FF">*--------------------------------------------------------------------*</font>
+DATA : BEGIN OF screen0160,
+         waers1    TYPE zca_waers,
+         waers2    TYPE zca_waers,
+         waers3    TYPE zca_waers,
+         zltxt     TYPE zca_zltxt,
+         plantname TYPE zca_pname,
+         slname    TYPE zca_lgobe,
+       END OF screen0160.
+
+<font color ="#0000FF">*--------------------------------------------------------------------*</font>
+<font color ="#0000FF">* screen 0170 / 은행 팝업</font>
+<font color ="#0000FF">*--------------------------------------------------------------------*</font>
+DATA : BEGIN OF screen0170,
+         zltxt TYPE zca_zltxt,
+       END OF screen0170.
+
+<font color ="#0000FF">*--------------------------------------------------------------------*</font>
+<font color ="#0000FF">* screen 0180 / 출고 문서 팝업</font>
+<font color ="#0000FF">*--------------------------------------------------------------------*</font>
+DATA : BEGIN OF screen0180,
+         plantname TYPE zca_pname,
+         slname    TYPE zca_lgobe,
+       END OF screen0180.
+
+<font color ="#0000FF">*--------------------------------------------------------------------*</font>
+<font color ="#0000FF">* screen 0190 / 생산오더 팝업</font>
+<font color ="#0000FF">*--------------------------------------------------------------------*</font>
+DATA : BEGIN OF s0190,
+         pname   TYPE zca_pname,
+         maktx   TYPE zca_MAKTX, " 자재명
+         approve TYPE string, " 승인 관련 텍스트
+       END OF s0190.
+
+<font color ="#0000FF">*--------------------------------------------------------------------*</font>
+<font color ="#0000FF">* ALV</font>
+<font color ="#0000FF">*--------------------------------------------------------------------*</font>
+<font color ="#0000FF">*-- 0100</font>
+DATA : go_con_0100  TYPE REF TO cl_gui_custom_container,
+       go_grid_0100 TYPE REF TO cl_gui_alv_grid.
+
+DATA gs_layout_0100 TYPE lvc_s_layo.
+DATA gs_variant_0100 TYPE disvariant.
+DATA gv_save_0100.
+
+<font color ="#0000FF">* ALV Field Catalog</font>
+DATA gt_fcat_0100 TYPE lvc_t_fcat.
+DATA gs_fcat_0100 TYPE lvc_s_fcat.
+
+<font color ="#0000FF">*-- 0110</font>
+DATA : go_con_0110  TYPE REF TO cl_gui_custom_container,
+       go_grid_0110 TYPE REF TO cl_gui_alv_grid.
+
+DATA gs_layout_0110 TYPE lvc_s_layo.
+DATA gs_variant_0110 TYPE disvariant.
+DATA gv_save_0110.
+
+<font color ="#0000FF">* ALV Field Catalog</font>
+DATA gt_fcat_0110 TYPE lvc_t_fcat.
+DATA gs_fcat_0110 TYPE lvc_s_fcat.
+</pre>
+<hr>
+<font size="2" face = "Sans Serif">Extracted by Direct Download Enterprise version 1.3.1 - E.G.Mellodew. 1998-2005 UK. Sap Release 758
+</font>
+</body>
+</html>

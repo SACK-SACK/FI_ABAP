@@ -1,0 +1,1675 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 3.2//EN">
+<html>
+<head>
+<title>ZCA_FI010_F01</title>
+</head>
+<body bgcolor="#FFFFE0">
+<font size="3" face = "Arial" color="#000000"><b>Code listing for: ZCA_FI010_F01</b></font>
+<br>
+<font size="3" face = "Arial" color="#000000"><b>Description:  Include ZCA_FI010_F01</b></font>
+<hr>
+<pre width="100">
+<font color ="#0000FF">*&---------------------------------------------------------------------*</font>
+<font color ="#0000FF">*& Include          ZCA_FI010_F01</font>
+<font color ="#0000FF">*&---------------------------------------------------------------------*</font>
+<font color ="#0000FF">*&---------------------------------------------------------------------*</font>
+<font color ="#0000FF">*& Form init_tree</font>
+<font color ="#0000FF">*&---------------------------------------------------------------------*</font>
+FORM init_tree .
+
+<font color ="#0000FF">*-- object 생성</font>
+  CREATE OBJECT go_custom_container
+    EXPORTING
+      container_name = 'CCON'.                 " Name of the Screen CustCtrl Name to Link Container To
+
+  " 트리 객체 생성
+  CREATE OBJECT go_alv_tree
+    EXPORTING
+      parent              = go_custom_container                      " Parent Container
+      node_selection_mode = cl_gui_column_tree=&gt;node_sel_mode_single " Nodes: Single or Multiple Selection
+      item_selection      = 'X'                                      " &lt;-- 아이템 selection 을 설정해서 아이템 클릭 이벤트도 가능하게 한다.
+      no_toolbar          = ''                                       " NO_TOOLBAR
+      no_html_header      = 'X'.                                     " NO_HTML_HEADER
+
+  " 트리 헤더
+  DATA l_hierarchy_header TYPE treev_hhdr.
+  PERFORM build_hierarchy_header CHANGING l_hierarchy_header.
+
+  " field catalog
+  PERFORM build_field_cat.
+
+  " 비어있는 gt_items 기반으로 화면을 출력
+  DATA: ls_variant TYPE disvariant.
+  ls_variant-report  = sy-repid.
+  ls_variant-handle = 'ALV1'.
+
+  CALL METHOD go_alv_tree-&gt;set_table_for_first_display
+    EXPORTING
+      is_variant          = ls_variant                 " Layout
+      i_save              = 'A'                " Save Layout
+      is_hierarchy_header = l_hierarchy_header                 " Hierarchy Fields
+    CHANGING
+      it_outtab           = gt_node                 " Output Table
+      it_fieldcatalog     = gt_field_cat.   " Field Catalog
+
+  " 트리 구조 생성
+  PERFORM create_hierarchy.
+  " 트리 이벤트 등록
+  PERFORM register_tree_events.
+
+  " 새로 고침
+  IF cl_gui_alv_grid=&gt;offline( ) IS INITIAL.
+    CALL METHOD go_alv_tree-&gt;frontend_update.
+  ENDIF.
+
+ENDFORM.
+<font color ="#0000FF">*&---------------------------------------------------------------------*</font>
+<font color ="#0000FF">*& Form build_hierarchy_header</font>
+<font color ="#0000FF">*&---------------------------------------------------------------------*</font>
+FORM build_hierarchy_header  CHANGING p_hierarchy_header TYPE treev_hhdr.
+
+  p_hierarchy_header-heading = '주차 별 전표'(t01).
+  p_hierarchy_header-tooltip = '주차 별 결산'(t02).
+  p_hierarchy_header-width = 35.
+  p_hierarchy_header-width_pix = ' '.
+
+ENDFORM.
+<font color ="#0000FF">*&---------------------------------------------------------------------*</font>
+<font color ="#0000FF">*& Form build_field_cat</font>
+<font color ="#0000FF">*&---------------------------------------------------------------------*</font>
+FORM build_field_cat.
+
+  " 트리 필드카탈로그 설정
+
+  REFRESH gt_field_cat.
+
+  CALL FUNCTION 'LVC_FIELDCATALOG_MERGE'
+    EXPORTING
+      i_structure_name = 'ZCA_FIT050'
+    CHANGING
+      ct_fieldcat      = gt_field_cat.
+
+  CLEAR gs_field_cat.
+  LOOP AT gt_field_cat INTO gs_field_cat.
+    CASE gs_field_cat-fieldname.
+      WHEN 'GJAHR' OR 'ITNUM' OR 'BSCHL'.
+        gs_field_cat-just = 'L'.
+      WHEN 'AUGDT'.
+        gs_field_cat-checkbox = 'X'.
+        gs_field_cat-outputlen = 10.
+
+      WHEN 'SAKNR' OR 'GLTXT' .
+        gs_field_cat-outputlen = 18.
+
+      WHEN 'BPCODE'.
+        gs_field_cat-just = 'C'.
+
+      WHEN 'AUGBL'.
+        gs_field_cat-just = 'C'.
+
+      WHEN 'DMBTR'.
+        gs_field_cat-outputlen = 18.
+        gs_field_cat-do_sum = 'X'.
+        gs_field_cat-h_ftype = 'SUM'.
+
+      WHEN OTHERS.
+        gs_field_cat-outputlen = 12.
+    ENDCASE.
+    MODIFY gt_field_cat FROM gs_field_cat.
+  ENDLOOP.
+
+  CLEAR gs_field_cat.
+  gs_field_cat-fieldname = 'BSTXT'.
+  gs_field_cat-coltext = '전기키 명'(t06).
+  gs_field_cat-outputlen = 15.
+  APPEND gs_field_cat TO gt_field_cat.
+
+  CLEAR gs_field_cat.
+  gs_field_cat-fieldname = 'DEBIT'.
+  gs_field_cat-coltext = '차변 금액'(t07).
+  gs_field_cat-ref_field = 'DMBTR'.
+  gs_field_cat-ref_table = 'ZCA_FIT050'.
+  gs_field_cat-outputlen = 18.
+  gs_field_cat-do_sum = 'X'.
+  gs_field_cat-h_ftype = 'SUM'.
+  gs_field_cat-cfieldname = 'WAERS' .
+  gs_field_cat-edit_mask = '==Z=='.
+  APPEND gs_field_cat TO gt_field_cat.
+
+  CLEAR gs_field_cat.
+  gs_field_cat-fieldname = 'CREDIT'.
+  gs_field_cat-coltext = '대변 금액'(t08).
+  gs_field_cat-outputlen = 18.
+  gs_field_cat-ref_field = 'DMBTR'.
+  gs_field_cat-ref_table = 'ZCA_FIT050'.
+  gs_field_cat-do_sum = 'X'.
+  gs_field_cat-h_ftype = 'SUM'.
+  gs_field_cat-cfieldname = 'WAERS' .
+  gs_field_cat-edit_mask = '==Z=='.
+  APPEND gs_field_cat TO gt_field_cat.
+
+ENDFORM.
+<font color ="#0000FF">*&---------------------------------------------------------------------*</font>
+<font color ="#0000FF">*& Form create_hierarchy</font>
+<font color ="#0000FF">*&---------------------------------------------------------------------*</font>
+FORM create_hierarchy.
+
+  DATA: lt_cat_name TYPE string_table.
+  lt_cat_name = VALUE string_table( ( |자산| ) ( |부채| ) ( |자본| ) ( |수익| ) ( |비용| ) ).
+
+  DATA: ls_item        TYPE ty_combined,
+        lt_result_copy TYPE TABLE OF ty_combined,
+        l_year         TYPE zca_date-pyear,
+        l_year_last    TYPE zca_date-pyear,
+        l_month        TYPE zca_date-pmonth,
+        l_month_last   TYPE zca_date-pmonth,
+        l_week         TYPE zca_date-pweek,
+        l_week_last    TYPE zca_date-pweek,
+        l_category_key TYPE lvc_nkey.
+
+  DATA: l_year_key  TYPE lvc_nkey,
+        l_month_key TYPE lvc_nkey,
+        l_week_key  TYPE lvc_nkey,
+        l_node_key  TYPE lvc_nkey.
+
+  lt_result_copy = gt_result.
+  SORT lt_result_copy BY  pyear
+                          pmonth
+                          pweek
+                          category_sort
+                          belnr
+                          itnum
+                          saknr.
+
+  LOOP AT lt_result_copy INTO ls_item.
+
+    DATA l_checkbox TYPE c.
+    DATA l_blocked  TYPE c. " X = 결산 불가능 / '' = 결산 가능
+    DATA l_bpcode   TYPE c. " bpcode 데이터 여부
+    DATA l_augbl   TYPE c. " augbl 데이터 여부
+    DATA l_current TYPE c. " 현재 주차 여부
+
+    l_year  = ls_item-pyear.
+    l_month = ls_item-pmonth.
+    l_week  = ls_item-pweek.
+
+    " 이미 결산을 한 주차는 block &gt; 회색 처리를 위해 block 결정
+    PERFORM is_past_period
+      USING ls_item-pyear ls_item-pmonth ls_item-pweek
+   CHANGING l_blocked l_current.
+
+<font color ="#0000FF">* 1. 년도</font>
+    IF l_year &lt;&gt; l_year_last.
+      l_year_last = l_year.
+
+      DATA(lv_year_msg) = |{ l_year }년|.
+      " 년도 노드 생성
+      PERFORM add_node
+        USING lv_year_msg '' abap_true abap_true
+     CHANGING l_year_key.
+
+      " 년도가 바뀌면 월/주차도 초기화
+      CLEAR: l_month_last, l_week_last.
+    ENDIF.
+
+<font color ="#0000FF">* 2. 월</font>
+    IF l_month &lt;&gt; l_month_last.
+      l_month_last = l_month.
+
+      DATA(lv_month_msg) = |{ l_month }월|.
+      " 월 노드 생성
+      PERFORM add_node
+        USING lv_month_msg l_year_key abap_true abap_true
+     CHANGING l_month_key.
+
+      " 월이 바뀌면 주차도 초기화
+      CLEAR: l_week_last.
+    ENDIF.
+
+<font color ="#0000FF">* 3. 주차</font>
+    IF l_week &lt;&gt; l_week_last.
+      l_week_last = l_week.
+
+      DATA: ls_date_line TYPE zca_date.
+
+      " 해당 하는 주차를 읽어온다.
+      READ TABLE gt_date_range INTO ls_date_line
+        WITH KEY pyear  = l_year
+                 pmonth = l_month
+                 pweek  = l_week.
+
+      DATA lv_week_msg TYPE string.
+      IF sy-subrc = 0.
+        lv_week_msg = |{ l_week }주차 { ls_date_line-pfromdate+4(2) }/{ ls_date_line-pfromdate+6(2) } ~ { ls_date_line-ptodate+4(2) }/{ ls_date_line-ptodate+6(2) }|.
+      ELSE.
+        lv_week_msg = |{ l_week }주차|.
+      ENDIF.
+
+      " 주차 노드 생성
+      PERFORM add_node_week
+        USING lv_week_msg l_month_key abap_true abap_true l_blocked l_current
+     CHANGING l_week_key.
+
+      "  현재 주차일 경우 노드 키 저장 (펼칠 노드를 지정하는데 사용)
+      IF l_current = abap_true AND gv_today_week_key IS INITIAL.
+        gv_today_week_key = l_week_key.
+      ENDIF.
+
+      " 4. 계정 분류 및 건수 계산
+      LOOP AT lt_cat_name INTO DATA(lv_cat_text).
+
+        " 건수를 계정 유형 노드에 함께 써주기 위해 계산
+        DATA(lv_count) = REDUCE i(
+          INIT x = 0
+          FOR wa IN gt_result
+          WHERE (
+            pyear    = ls_item-pyear AND
+            pmonth   = ls_item-pmonth AND
+            pweek    = ls_item-pweek AND
+            category = lv_cat_text
+          )
+          NEXT x = x + 1
+        ).
+
+        DATA(lv_folder_text) = |{ lv_cat_text }({ lv_count }건)|.
+        " 계정 유형 노드 생성 (자산, 부채, 자본, 수익, 비용)
+        PERFORM add_node USING lv_folder_text l_week_key abap_true abap_true CHANGING l_category_key.
+
+        " 폴더 키를 카테고리와 매핑해서 매핑 테이블에 추가
+        APPEND VALUE ty_cat_map(
+                pyear    = l_year
+                pmonth   = l_month
+                pweek    = l_week
+                category = lv_cat_text
+                node_key = l_category_key
+       ) TO gt_cat_map.
+
+      ENDLOOP.
+      " 주차 노드 추가할 때 매핑 테이블에 주차와 노드키를 저장
+      APPEND VALUE #(
+        node_key = l_week_key
+        pyear    = l_year
+        pmonth   = l_month
+        pweek    = l_week
+      ) TO gt_period_map.
+    ENDIF.
+
+<font color ="#0000FF">* 5. 전표 아이템 - 최종 !! 노드 !!</font>
+    DATA(lv_belnr_clean) = |{ ls_item-belnr ALPHA = OUT }|. " ALPHA 포맷을 적용해 문자열로
+    SHIFT lv_belnr_clean LEFT DELETING LEADING '0'. " 앞자리 0 제거
+    DATA(lv_doc_msg) = |전표: { lv_belnr_clean }|.
+
+    " 여기서 레이아웃을 설정해서 체크박스 설정을 했음
+    CLEAR gt_layout_item.
+    CLEAR gs_layout_node.
+
+    " 반제 여부는 체크박스
+    IF ls_item-augdt EQ 'X'.
+      l_checkbox = 'X'.
+      ls_item-augdt = space.
+    ELSE.
+      l_checkbox = ''.
+    ENDIF.
+
+    " 블럭한 건 회색 글씨 처리(style로 지정)
+    IF l_blocked EQ 'X'.
+      gs_layout_node-style = cl_gui_column_tree=&gt;style_inactive.
+    ELSE.
+      IF ls_item-is_open EQ abap_true. " 미결이면 빨간 글씨 표시
+        gs_layout_node-style = cl_gui_column_tree=&gt;style_intensifd_critical.
+      ENDIF.
+    ENDIF.
+
+    " bpcode, augbl 있는지 -&gt; 버튼 처리를 위해 / 없으면 버튼 처리도 하지 않고 비워둔다.
+    IF ls_item-bpcode IS NOT INITIAL.
+      l_bpcode = 'X'.
+    ELSE.
+      l_bpcode = ''.
+    ENDIF.
+
+    IF ls_item-augbl IS NOT INITIAL .
+      l_augbl = 'X'.
+    ELSE.
+      l_augbl = ''.
+    ENDIF.
+
+    " 위에서 지정한거 기반으로 layout을 저장
+    PERFORM set_layout USING l_checkbox l_blocked l_bpcode l_augbl.
+
+<font color ="#0000FF">* 아이템들 생성</font>
+
+    " 부모를 읽어와서 노드에 추가할 때 반영 예정
+    READ TABLE gt_cat_map INTO DATA(ls_cat_map)
+  WITH KEY pyear = ls_item-pyear
+           pmonth = ls_item-pmonth
+           pweek = ls_item-pweek
+           category = ls_item-category.
+    IF sy-subrc = 0.
+      " 전표 아이템 노드 추가
+      PERFORM add_node_item USING lv_doc_msg ls_cat_map-node_key ls_item gs_layout_node gt_layout_item CHANGING l_node_key.
+
+      " 해당 노드키도 매핑 테이블에 추가
+      APPEND VALUE ty_node_map(
+        node_key = l_node_key
+        bukrs    = ls_item-bukrs
+        gjahr    = ls_item-gjahr
+        belnr    = ls_item-belnr ) TO gt_node_map.
+    ENDIF.
+
+  ENDLOOP.
+
+  " 펼쳐놓기: 오늘 날짜에 해당하는 주차가 있으면 그것부터 펼쳐놓고 아니면 가장 마지막 주차가 펼쳐짐
+  IF gv_today_week_key IS NOT INITIAL.
+    CALL METHOD go_alv_tree-&gt;expand_node
+      EXPORTING
+        i_node_key = gv_today_week_key.
+
+  ELSEIF l_month_key IS NOT INITIAL.
+    CALL METHOD go_alv_tree-&gt;expand_node
+      EXPORTING
+        i_node_key = l_week_key.
+  ENDIF.
+
+  " 계산 적용
+  go_alv_tree-&gt;update_calculations( ).
+
+ENDFORM.
+<font color ="#0000FF">*&---------------------------------------------------------------------*</font>
+<font color ="#0000FF">*& Form add_node : 년도, 월, 계정 유형 노드 추가</font>
+<font color ="#0000FF">*&---------------------------------------------------------------------*</font>
+FORM add_node  USING    p_node_text                   " 노드 텍스트
+                        p_relat_key TYPE lvc_nkey     " 부모 키
+                        p_isfolder  TYPE abap_bool    " 폴더 여부
+                        p_hide_line TYPE abap_bool
+               CHANGING p_node_key  TYPE lvc_nkey.    " 새로 생성된 노드 키
+
+  DATA : l_node_text TYPE lvc_value,
+         ls_layout   TYPE lvc_s_layn.
+  l_node_text = p_node_text.
+
+  IF p_isfolder = abap_true.
+    ls_layout-isfolder = abap_true.
+  ENDIF.
+
+  IF p_hide_line = abap_true.
+    ls_layout-no_branch = abap_true.
+  ENDIF.
+  ls_layout-disabled = abap_true. " 선택(클릭)을 불가능하게 조치
+
+  " add_node
+  CALL METHOD go_alv_tree-&gt;add_node
+    EXPORTING
+      i_relat_node_key = p_relat_key                            " Node Already in Tree Hierarchy
+      i_relationship   = cl_gui_column_tree=&gt;relat_last_child   " How to Insert Node
+      is_node_layout   = ls_layout                              " Node Layout
+<font color ="#0000FF">*     it_item_layout   = ls_layout                              " Item Layout</font>
+      i_node_text      = l_node_text                            " Hierarchy Node Text
+    IMPORTING
+      e_new_node_key   = p_node_key.                            " Key of New Node Key
+
+ENDFORM.
+
+<font color ="#0000FF">*&---------------------------------------------------------------------*</font>
+<font color ="#0000FF">*& Form add_node_week</font>
+<font color ="#0000FF">*&---------------------------------------------------------------------*</font>
+FORM add_node_week  USING    p_node_text
+                        p_relat_key TYPE lvc_nkey
+                        p_isfolder  TYPE abap_bool
+                        p_hide_line TYPE abap_bool
+                        p_blocked   TYPE c
+                        p_is_current   TYPE c
+               CHANGING p_node_key  TYPE lvc_nkey.
+
+  DATA : l_node_text TYPE lvc_value,
+         ls_layout   TYPE lvc_s_layn.
+  l_node_text = p_node_text.
+
+  IF p_isfolder = abap_true.
+    ls_layout-isfolder = abap_true.
+  ENDIF.
+
+  IF p_hide_line = abap_true.
+    ls_layout-no_branch = abap_true.
+  ENDIF.
+
+  " 스타일 및 아이콘 결정
+  IF p_blocked EQ ''. " 결산 가능
+    ls_layout-n_image = '@5D@'.  " 노랑불
+    ls_layout-exp_image = '@5D@'.
+
+    IF p_is_current = abap_true.
+      ls_layout-style = cl_gui_column_tree=&gt;style_emphasized_positive. " 현재 주차
+    ENDIF.
+  ELSEIF p_blocked EQ 'X'.  " 결산 불가능(이미 완료)
+    ls_layout-style = cl_gui_column_tree=&gt;style_inactive.
+    ls_layout-n_image = '@5B@'.  " 초록불
+    ls_layout-exp_image = '@5B@'.
+  ENDIF.
+
+  " add_node
+  CALL METHOD go_alv_tree-&gt;add_node
+    EXPORTING
+      i_relat_node_key = p_relat_key                 " Node Already in Tree Hierarchy
+      i_relationship   = cl_gui_column_tree=&gt;relat_last_child                 " How to Insert Node
+      is_node_layout   = ls_layout                " Node Layout
+<font color ="#0000FF">*     it_item_layout   = ls_layout                        " Item Layout</font>
+      i_node_text      = l_node_text                " Hierarchy Node Text
+    IMPORTING
+      e_new_node_key   = p_node_key.                 " Key of New Node Key
+
+ENDFORM.
+
+<font color ="#0000FF">*&---------------------------------------------------------------------*</font>
+<font color ="#0000FF">*& Form add_node_item</font>
+<font color ="#0000FF">*&---------------------------------------------------------------------*</font>
+FORM add_node_item  USING    p_node_text
+                        p_relat_key TYPE lvc_nkey
+                        p_item      TYPE ty_combined
+                        ps_layout   TYPE lvc_s_layn
+                        pt_layout   TYPE lvc_t_layi
+               CHANGING p_node_key  TYPE lvc_nkey.
+
+  DATA : l_node_text TYPE lvc_value.
+  l_node_text = p_node_text.
+
+  " add_node
+  CALL METHOD go_alv_tree-&gt;add_node
+    EXPORTING
+      i_relat_node_key = p_relat_key                 " Node Already in Tree Hierarchy
+      i_relationship   = cl_gui_column_tree=&gt;relat_last_child                 " How to Insert Node
+      is_outtab_line   = p_item                   " Attributes of Inserted Node
+      is_node_layout   = ps_layout                " Node Layout
+      it_item_layout   = pt_layout                  " Item Layout
+      i_node_text      = l_node_text                " Hierarchy Node Text
+    IMPORTING
+      e_new_node_key   = p_node_key.                 " Key of New Node Key
+
+ENDFORM.
+<font color ="#0000FF">*&---------------------------------------------------------------------*</font>
+<font color ="#0000FF">*& Form select_data</font>
+<font color ="#0000FF">*&---------------------------------------------------------------------*</font>
+FORM select_data .
+
+  REFRESH : gt_result, gt_date_range, gt_header, gt_all_items.
+
+  DATA: lv_from_month TYPE zca_date-pmonth VALUE '00',
+        lv_from_year  TYPE zca_date-pyear VALUE '0'.
+
+  SELECT * FROM zca_date
+    INTO TABLE @gt_date_range
+    WHERE pyear  IN @so_year
+      AND pyear &lt;= @sy-datum+0(4)
+      AND pmonth IN @so_month
+      AND pweek  IN @so_week.
+
+  " 헤더 & 아이템 테이블 select
+  SELECT bukrs belnr gjahr blart bldat budat bltxt xblnr INTO CORRESPONDING FIELDS OF TABLE gt_header
+    FROM zca_fit040
+    WHERE bukrs IN so_bukrs
+      AND gjahr IN so_year.
+
+  SELECT bukrs belnr gjahr itnum bschl saknr gltxt dmbtr waers
+         bpcode augdt augbl INTO CORRESPONDING FIELDS OF TABLE gt_all_items
+    FROM zca_fit050
+    WHERE bukrs IN so_bukrs
+      AND gjahr IN so_year.
+
+  LOOP AT gt_date_range INTO DATA(ls_date).
+    " 날짜 범위에 해당하는 헤더 필터링 후, 아이템 필터링 &gt; field symbol 이용해서 헤더에 접근하기
+    LOOP AT gt_header ASSIGNING FIELD-SYMBOL(&lt;fs_header&gt;)
+      WHERE budat BETWEEN ls_date-pfromdate AND ls_date-ptodate.
+
+      " 여기에 아이템 필터 및 결과 추가 수행
+      " 해당 헤더(bukrs+gjahr+belnr)에 연결된 아이템들을 필터링하여 결합 구조 생성
+      DATA(lt_item_filtered) = VALUE ty_combined_tab(
+                                       " gt_all_items에서 조건에 맞는 항목을 추출
+                                       FOR item IN gt_all_items
+                                       WHERE ( bukrs = &lt;fs_header&gt;-bukrs AND
+                                       gjahr = &lt;fs_header&gt;-gjahr AND
+                                       belnr = &lt;fs_header&gt;-belnr
+                                       AND saknr &lt;&gt; '6100010000'
+                                       ) " 임시 계정은 제외
+                                       " 새로운 구조로 변환해서 결과 테이블에 넣을 형태로 변환
+                                       ( VALUE ty_combined(
+                                           BASE CORRESPONDING #( item ) " item 에 있는건 corresponding 으로 추가
+                                           pyear  = ls_date-pyear
+                                           pmonth = ls_date-pmonth
+                                           pweek  = ls_date-pweek
+                                           debit  = COND zca_dmbtr( WHEN item-bschl+1(1) = 1
+                                                                    THEN item-dmbtr ELSE 0 )
+                                           credit = COND zca_dmbtr( WHEN item-bschl+1(1) = 2
+                                                                    THEN item-dmbtr ELSE 0 )
+                                         ) )
+                                    ).
+      " 2-2. 결과 테이블에 추가
+      APPEND LINES OF lt_item_filtered TO gt_result.
+
+    ENDLOOP.
+  ENDLOOP.
+  PERFORM get_temp_docu. " 임시 계정만 계산 &gt; 혹시 차액이 있다면 평가손익처리
+
+ENDFORM.
+<font color ="#0000FF">*&---------------------------------------------------------------------*</font>
+<font color ="#0000FF">*& Form get_every_date</font>
+<font color ="#0000FF">*&---------------------------------------------------------------------*</font>
+FORM get_every_date .
+
+  SELECT * FROM zca_date
+    WHERE pyear &lt;= @sy-datum+0(4) " 이번 년도까지
+    INTO TABLE @gt_date_range.
+
+ENDFORM.
+<font color ="#0000FF">*&---------------------------------------------------------------------*</font>
+<font color ="#0000FF">*& Form set_layout</font>
+<font color ="#0000FF">*&---------------------------------------------------------------------*</font>
+FORM set_layout USING p_status p_blocked p_bpcode p_augbl.
+
+  DATA ls_layout_item LIKE gs_layout_item.
+
+  " 체크박스 설정 예시
+  CLEAR ls_layout_item.
+  ls_layout_item-fieldname = 'AUGDT'.
+  ls_layout_item-class     = cl_gui_column_tree=&gt;item_class_checkbox.
+  ls_layout_item-chosen    = p_status.
+  APPEND ls_layout_item TO gt_layout_item.
+
+  IF p_bpcode EQ 'X'.
+    CLEAR ls_layout_item.
+    ls_layout_item-fieldname  = 'BPCODE'.
+    ls_layout_item-class      = cl_gui_column_tree=&gt;item_class_button.
+    APPEND ls_layout_item TO gt_layout_item.
+  ENDIF.
+
+  IF p_augbl EQ 'X'.
+    CLEAR ls_layout_item.
+    ls_layout_item-fieldname  = 'AUGBL'.
+    ls_layout_item-class      = cl_gui_column_tree=&gt;item_class_button.
+    APPEND ls_layout_item TO gt_layout_item.
+  ENDIF.
+
+ENDFORM.
+<font color ="#0000FF">*&---------------------------------------------------------------------*</font>
+<font color ="#0000FF">*& Form is_past_period</font>
+<font color ="#0000FF">*&---------------------------------------------------------------------*</font>
+<font color ="#0000FF">*& text</font>
+<font color ="#0000FF">*&---------------------------------------------------------------------*</font>
+FORM is_past_period
+  USING
+    p_year   TYPE zca_date-pyear
+    p_month  TYPE zca_date-pmonth
+    p_week   TYPE zca_date-pweek
+  CHANGING
+    p_blocked TYPE c
+    p_is_current TYPE c.
+
+  DATA: lv_exists TYPE abap_bool.
+
+  " 초기화
+  p_blocked = abap_off.
+  p_is_current = abap_off.
+
+  " 해당 연-월-주차에 결산 데이터가 존재하는지 확인
+  SELECT SINGLE mandt
+    FROM zca_fit110
+    WHERE pyear  = @p_year
+      AND pmonth = @p_month
+      AND pweek  = @p_week
+    INTO @DATA(lv_dummy).
+
+  IF sy-subrc = 0.
+    p_blocked = 'X'.  " 이미 결산된 주차 &gt; 블록
+  ELSE.
+    p_blocked = ''.   " 결산되지 않음 &gt; 통과
+
+    " 현재 주차인지도 확인
+    IF     p_year  = gv_today_year
+       AND p_month = gv_today_month
+       AND p_week  = gv_today_week.
+      p_is_current = abap_true.
+    ENDIF.
+  ENDIF.
+
+ENDFORM.
+
+<font color ="#0000FF">*&---------------------------------------------------------------------*</font>
+<font color ="#0000FF">*& Form clear_tree_data</font>
+<font color ="#0000FF">*&---------------------------------------------------------------------*</font>
+FORM clear_tree_data.
+  REFRESH: gt_result, gt_node.
+  IF go_alv_tree IS BOUND.
+    go_alv_tree-&gt;delete_all_nodes( ).
+  ENDIF.
+ENDFORM.
+<font color ="#0000FF">*&---------------------------------------------------------------------*</font>
+<font color ="#0000FF">*& Form init_today_period</font>
+<font color ="#0000FF">*&---------------------------------------------------------------------*</font>
+FORM init_today_period.
+
+  SELECT SINGLE pyear, pmonth, pweek
+    INTO (@gv_today_year, @gv_today_month, @gv_today_week)
+    FROM zca_date
+    WHERE pfromdate &lt;= @sy-datum
+      AND ptodate   &gt;= @sy-datum.
+
+  IF sy-subrc &lt;&gt; 0.
+    CLEAR: gv_today_year, gv_today_month, gv_today_week.
+  ENDIF.
+
+ENDFORM.
+<font color ="#0000FF">*&---------------------------------------------------------------------*</font>
+<font color ="#0000FF">*& Form set_category_for_items</font>
+<font color ="#0000FF">*&---------------------------------------------------------------------*</font>
+FORM set_category_for_items .
+
+  FIELD-SYMBOLS: &lt;ls_item&gt; TYPE ty_combined.
+
+  DATA lt_tbsl TYPE TABLE OF zca_tbsl.
+  DATA ls_tbsl TYPE zca_tbsl.
+  SELECT bschl bstxt FROM zca_tbsl
+      INTO CORRESPONDING FIELDS OF TABLE lt_tbsl.
+
+  LOOP AT gt_result ASSIGNING &lt;ls_item&gt;.
+
+    " 전기키 텍스트 설정
+    CLEAR ls_tbsl.
+    READ TABLE lt_tbsl INTO ls_tbsl WITH KEY bschl = &lt;ls_item&gt;-bschl.
+    &lt;ls_item&gt;-bstxt = ls_tbsl-bstxt.
+
+    CASE &lt;ls_item&gt;-saknr+0(1).
+      WHEN '1'.
+        &lt;ls_item&gt;-category = '자산'(a01).
+        &lt;ls_item&gt;-category_sort = 1.
+      WHEN '2'.
+        &lt;ls_item&gt;-category = '부채'(a02).
+        &lt;ls_item&gt;-category_sort = 2.
+      WHEN '3'.
+        &lt;ls_item&gt;-category = '자본'(a03).
+        &lt;ls_item&gt;-category_sort = 3.
+      WHEN '4'.
+        &lt;ls_item&gt;-category = '수익'(a04).
+        &lt;ls_item&gt;-category_sort = 4.
+      WHEN '5'.
+        &lt;ls_item&gt;-category = '비용'(a05).
+        &lt;ls_item&gt;-category_sort = 5.
+      WHEN OTHERS.
+        &lt;ls_item&gt;-category = '기타'(a06).
+        &lt;ls_item&gt;-category_sort = 9.
+    ENDCASE.
+  ENDLOOP.
+
+ENDFORM.
+<font color ="#0000FF">*&---------------------------------------------------------------------*</font>
+<font color ="#0000FF">*& Form set_open_flag_for_items</font>
+<font color ="#0000FF">*&---------------------------------------------------------------------*</font>
+FORM set_open_flag_for_items .
+
+  DATA: lt_gl_master TYPE TABLE OF zca_fit010,
+        ls_gl_master TYPE zca_fit010.
+
+  SELECT * INTO TABLE lt_gl_master FROM zca_fit010
+    FOR ALL ENTRIES IN gt_all_items
+    WHERE bukrs = gt_all_items-bukrs
+      AND saknr = gt_all_items-saknr.
+
+  FIELD-SYMBOLS: &lt;ls_item&gt; TYPE ty_combined,
+                 &lt;ls_gl&gt;   TYPE zca_fit010.
+
+  LOOP AT gt_result ASSIGNING &lt;ls_item&gt;.
+
+    READ TABLE lt_gl_master ASSIGNING &lt;ls_gl&gt;
+         WITH KEY bukrs = &lt;ls_item&gt;-bukrs
+                  saknr = &lt;ls_item&gt;-saknr.
+
+    IF sy-subrc = 0.
+      IF  ( &lt;ls_item&gt;-augdt IS INITIAL ) .
+        &lt;ls_item&gt;-is_open = abap_true.
+      ELSE.
+        &lt;ls_item&gt;-is_open = abap_false.
+      ENDIF.
+    ELSE.
+      " G/L 마스터 못 찾으면 기본적으로 미결 아님 처리
+      &lt;ls_item&gt;-is_open = abap_false.
+    ENDIF.
+
+  ENDLOOP.
+
+ENDFORM.
+<font color ="#0000FF">*&---------------------------------------------------------------------*</font>
+<font color ="#0000FF">*& Form set_closing</font>
+<font color ="#0000FF">*&---------------------------------------------------------------------*</font>
+FORM set_closing .
+
+  " 결산 가능한 행인지 확인
+  " 팝업으로 먼저 묻기
+  " 그 다음에 최종 시산표 출력 -&gt; 팝업 ALV
+  DATA: lt_selected_nodes TYPE lvc_t_nkey,
+        lv_node_key       TYPE lvc_nkey,
+        ls_period_map     TYPE ty_period_map.
+
+  " 1. 선택한 노드 가져오기
+  CALL METHOD go_alv_tree-&gt;get_selected_nodes
+    CHANGING
+      ct_selected_nodes = lt_selected_nodes.
+
+  READ TABLE lt_selected_nodes INTO lv_node_key INDEX 1.
+
+  IF sy-subrc &lt;&gt; 0 .
+    " 선택된 아이템이 있는지도 확인하기 (주차 아이템)
+    go_alv_tree-&gt;get_selected_item(
+      IMPORTING
+        e_selected_node   = lv_node_key                 " Selected Node
+     ).
+  ENDIF.
+
+  IF lv_node_key IS INITIAL.
+    MESSAGE s412 DISPLAY LIKE 'E'.  " 주차를 선택하세요.
+    RETURN.
+  ENDIF.
+
+  " 2. 주차 정보 매핑
+  READ TABLE gt_period_map INTO ls_period_map WITH KEY node_key = lv_node_key.
+  IF sy-subrc &lt;&gt; 0.
+    MESSAGE s413 DISPLAY LIKE 'E'. " 주차 폴더를 선택하세요. (전표 아이템이 아닙니다)
+    RETURN.
+  ENDIF.
+
+  IF gv_flag IS NOT INITIAL. " 결산 flag 일 때
+
+    DATA ls_date TYPE zca_date.
+
+    " 3. 주차가 완료 되었는지를 확인
+    SELECT SINGLE ptodate pfromdate
+      INTO CORRESPONDING FIELDS OF ls_date
+      FROM zca_date
+      WHERE pyear EQ ls_period_map-pyear
+      AND pmonth EQ ls_period_map-pmonth
+      AND pweek EQ ls_period_map-pweek.
+
+    IF sy-datum &lt; ls_date-ptodate .
+      MESSAGE s441 DISPLAY LIKE 'E'. " 주차가 아직 끝나지 않아, 결산이 불가능합니다
+      RETURN.
+    ENDIF.
+
+    " 4. 이미 결산된 주차인지 체크
+    DATA ls_fit110 TYPE zca_fit110.
+    SELECT SINGLE * FROM zca_fit110 INTO ls_fit110
+     WHERE pyear  = ls_period_map-pyear
+       AND pmonth = ls_period_map-pmonth
+       AND pweek  = ls_period_map-pweek.
+
+    IF sy-subrc = 0.
+      MESSAGE s415 DISPLAY LIKE 'E'.  " 이미 결산이 완료된 주차입니다.
+      RETURN.
+    ENDIF.
+
+    " 5. 이전 주차 결산 여부 확인
+    DATA: lt_prev_dates TYPE STANDARD TABLE OF zca_date WITH EMPTY KEY,
+          ls_prev_date  TYPE zca_date.
+
+    " 현재 주차 이전의 모든 주차를 가져오기
+    SELECT pyear, pmonth, pweek, pfromdate
+      INTO TABLE @lt_prev_dates
+      FROM zca_date
+      WHERE pfromdate &lt; @ls_date-pfromdate.
+
+    IF lt_prev_dates IS INITIAL.
+      " 이전 주차가 없는 경우, 첫 주차라면 통과
+      RETURN.
+    ENDIF.
+
+    " 가장 최근 주차로 정렬 (내림차순)
+    SORT lt_prev_dates BY pfromdate DESCENDING.
+
+    " 가장 마지막 행 =&gt; 가장 가까운 이전 주차
+    READ TABLE lt_prev_dates INTO ls_prev_date INDEX 1.
+
+    " 이전 주차가 존재한다면, 결산 여부 확인
+    DATA ls_prev_fit110 TYPE zca_fit110.
+    SELECT SINGLE * INTO ls_prev_fit110
+      FROM zca_fit110
+      WHERE pyear  = ls_prev_date-pyear
+        AND pmonth = ls_prev_date-pmonth
+        AND pweek  = ls_prev_date-pweek.
+
+    IF sy-subrc &lt;&gt; 0.
+      MESSAGE s461 DISPLAY LIKE 'E'. " 이전 주차가 결산되지 않았습니다. 이전 주차를 먼저 결산하세요.
+      RETURN.
+    ENDIF.
+
+  ENDIF.
+
+  " 여기서 시산표 ALV 출력 또는 결산 처리 로직 호출
+  PERFORM show_trial_balance
+          USING ls_period_map-pyear
+                ls_period_map-pmonth
+                ls_period_map-pweek.
+
+ENDFORM.
+<font color ="#0000FF">*&---------------------------------------------------------------------*</font>
+<font color ="#0000FF">*& Form register_tree_events</font>
+<font color ="#0000FF">*&---------------------------------------------------------------------*</font>
+FORM register_tree_events .
+
+<font color ="#0000FF">* 핸들러 오브젝트 생성 후 연결</font>
+  SET HANDLER lcl_event_handler=&gt;on_double_click FOR go_alv_tree.
+  SET HANDLER lcl_event_handler=&gt;on_button_click FOR go_alv_tree.
+  SET HANDLER lcl_event_handler=&gt;on_item_double_click FOR go_alv_tree.
+
+
+  DATA: lt_events TYPE cntl_simple_events,
+        l_event   TYPE cntl_simple_event.
+
+<font color ="#0000FF">* 이벤트 테이블 초기화</font>
+  REFRESH lt_events.
+  CALL METHOD go_alv_tree-&gt;get_registered_events
+    IMPORTING
+      events = lt_events.
+
+<font color ="#0000FF">* node_double_click 이벤트 등록</font>
+  CLEAR l_event.
+  l_event-eventid = cl_gui_column_tree=&gt;eventid_node_double_click.
+  APPEND l_event TO lt_events.
+
+<font color ="#0000FF">* button click 이벤트 등록</font>
+  CLEAR l_event.
+  l_event-eventid = cl_gui_column_tree=&gt;eventid_button_click.
+  APPEND l_event TO lt_events.
+
+<font color ="#0000FF">* item_double_click 등록</font>
+  CLEAR l_event.
+  l_event-eventid = cl_gui_column_tree=&gt;eventid_item_double_click.
+  APPEND l_event TO lt_events.
+
+<font color ="#0000FF">* ALV TREE에 이벤트 세팅</font>
+  CALL METHOD go_alv_tree-&gt;set_registered_events
+    EXPORTING
+      events = lt_events.
+
+<font color ="#0000FF">* 반드시 flush</font>
+  CALL METHOD cl_gui_cfw=&gt;flush
+    EXCEPTIONS
+      cntl_system_error = 1
+      cntl_error        = 2
+      OTHERS            = 3.
+  IF sy-subrc &lt;&gt; 0.
+    MESSAGE s417 DISPLAY LIKE 'E'.  " 이벤트 등록 중 오류
+  ENDIF.
+
+ENDFORM.
+<font color ="#0000FF">*&---------------------------------------------------------------------*</font>
+<font color ="#0000FF">*& show_trial_balance : 시산표 계산</font>
+<font color ="#0000FF">*&---------------------------------------------------------------------*</font>
+FORM show_trial_balance USING p_year TYPE zca_date-pyear
+                                p_month TYPE zca_date-pmonth
+                                p_week TYPE zca_date-pweek.
+
+  " 계정명에 색칠
+  DATA: ls_color TYPE lvc_s_scol.
+  ls_color-fname = 'GLTXT'.
+  ls_color-color-col = col_positive.
+  ls_color-color-int = 0.
+  ls_color-color-inv = 0.
+
+  REFRESH gt_trial.
+  CLEAR gs_trial.
+  gv_balance_credit_sum = gv_balance_debit_sum = 0.  " 초기화
+
+  " 집계 (기간 조건)
+  LOOP AT gt_result INTO DATA(ls_item)
+    WHERE pyear = p_year
+      AND ( pmonth &lt;  p_month
+          OR ( pmonth = p_month AND pweek &lt;= p_week ) ).
+
+    " 현재 이 계정이 존재하는지를 체크
+    READ TABLE gt_trial INTO gs_trial
+      WITH KEY saknr = ls_item-saknr.
+
+    IF sy-subrc &lt;&gt; 0.
+      " 새로운 계정이면 gt_trial에 append
+      CLEAR gs_trial.
+      gs_trial-category = ls_item-category.
+      gs_trial-category_sort = ls_item-category_sort.
+      gs_trial-saknr    = ls_item-saknr.
+      gs_trial-gltxt    = ls_item-gltxt.
+      APPEND gs_trial TO gt_trial.
+      READ TABLE gt_trial INTO gs_trial WITH KEY saknr = ls_item-saknr.
+    ENDIF.
+
+    " 전기키로 차/대변 구분해서 계산하기 -&gt; 금액 계산
+    CASE ls_item-bschl.
+      WHEN '11' OR '21' OR '31' OR '41' OR '81'. " 차변
+        gs_trial-debit = gs_trial-debit + ls_item-dmbtr.
+      WHEN '12' OR '22' OR '32' OR '42' OR '50'. " 대변
+        gs_trial-credit = gs_trial-credit + ls_item-dmbtr.
+    ENDCASE.
+
+    " 수정 해주기
+    MODIFY gt_trial FROM gs_trial INDEX sy-tabix.
+
+  ENDLOOP.
+
+  " 잔액 계산 (양수면 차변 / 음수면 대변)
+  CLEAR gs_trial.
+  LOOP AT gt_trial INTO gs_trial.
+    DATA ls_balance TYPE zca_dmbtr.
+    ls_balance = gs_trial-debit - gs_trial-credit.
+    CLEAR: gs_trial-balance_debit, gs_trial-balance_credit.
+
+    IF ls_balance &gt;= 0.
+      gs_trial-balance_debit = ls_balance.
+      gv_balance_debit_sum += gs_trial-balance_debit.  " 총 합계에도 더해주기
+    ELSE.
+      gs_trial-balance_credit = abs( ls_balance ). " 절댓값 처리
+      gv_balance_credit_sum += gs_trial-balance_credit.
+    ENDIF.
+
+    APPEND ls_color TO gs_trial-cell_colors.
+    MODIFY gt_trial FROM gs_trial.
+  ENDLOOP.
+
+  " 임시 계정 계산 &gt; 평가손익처리를 위해서 (대부분 없음)
+  DATA lv_result TYPE zca_dmbtr.
+  PERFORM calculate_temp USING p_year p_month p_week CHANGING lv_result.
+  IF lv_result &gt; 0. " 차변
+    gv_balance_debit_sum += lv_result.
+  ELSEIF lv_result &lt; 0. " 대변
+    gv_balance_credit_sum += abs( lv_result ).
+  ENDIF.
+
+  " ALV 팝업
+  s0120-year = p_year.
+  s0120-month = p_month.
+  s0120-week = p_week.
+
+  CALL SCREEN 0120 STARTING AT 10 20.
+
+ENDFORM.
+<font color ="#0000FF">*&---------------------------------------------------------------------*</font>
+<font color ="#0000FF">*& Form set_popup_fieldcat</font>
+<font color ="#0000FF">*&---------------------------------------------------------------------*</font>
+FORM set_popup_fieldcat .
+
+  REFRESH gt_field_cat_p.
+
+  " 순서
+  CLEAR gs_field_cat_p.
+  gs_field_cat_p-fieldname = 'CATEGORY_SORT'.
+  gs_field_cat_p-coltext   = '순서'(f01).
+  gs_field_cat_p-no_out    = 'X'.
+  APPEND gs_field_cat_p TO gt_field_cat_p.
+
+  " 0. 카테고리
+  CLEAR gs_field_cat_p.
+  gs_field_cat_p-fieldname = 'CATEGORY'.
+  gs_field_cat_p-coltext   = '계정유형'(f02).
+  gs_field_cat_p-outputlen = 10.
+  gs_field_cat_p-col_pos = 10.
+  APPEND gs_field_cat_p TO gt_field_cat_p.
+
+  " 1. 계정명 (GLTXT)
+  CLEAR gs_field_cat_p.
+  gs_field_cat_p-fieldname = 'GLTXT'.
+  gs_field_cat_p-ref_field = 'GLTXT'.
+  gs_field_cat_p-ref_table = 'ZCA_FIT050'.
+  gs_field_cat_p-coltext   = '계정명'(f03).
+  gs_field_cat_p-just = 'C'.
+  gs_field_cat_p-outputlen = 15.
+  gs_field_cat_p-col_pos = 20.
+  APPEND gs_field_cat_p TO gt_field_cat_p.
+
+  " 2. 차변합계 (DEBIT)
+  CLEAR gs_field_cat_p.
+  gs_field_cat_p-fieldname = 'DEBIT'.
+  gs_field_cat_p-coltext   = '차변 합계'(f04).
+  gs_field_cat_p-outputlen = 15.
+  gs_field_cat_p-col_pos = 30.
+  gs_field_cat_p-do_sum    = abap_on.       " 합계 표시
+  gs_field_cat_p-currency  = 'KRW'.
+  APPEND gs_field_cat_p TO gt_field_cat_p.
+
+  " 3. 대변합계 (CREDIT)
+  CLEAR gs_field_cat_p.
+  gs_field_cat_p-fieldname = 'CREDIT'.
+  gs_field_cat_p-coltext   = '대변 합계'(f05).
+  gs_field_cat_p-outputlen = 15.
+  gs_field_cat_p-col_pos = 40.
+  gs_field_cat_p-do_sum    = abap_on.
+  gs_field_cat_p-currency  = 'KRW'.
+  APPEND gs_field_cat_p TO gt_field_cat_p.
+
+  " 4. 차변잔액 (BALANCE_DEBIT)
+  CLEAR gs_field_cat_p.
+  gs_field_cat_p-fieldname = 'BALANCE_DEBIT'.
+  gs_field_cat_p-coltext   = '차변 잔액'(f06).
+  gs_field_cat_p-outputlen = 15.
+  gs_field_cat_p-col_pos = 50.
+  gs_field_cat_p-do_sum    = abap_on.
+  gs_field_cat_p-currency  = 'KRW'.
+  APPEND gs_field_cat_p TO gt_field_cat_p.
+
+  " 5. 대변잔액 (BALANCE_CREDIT)
+  CLEAR gs_field_cat_p.
+  gs_field_cat_p-fieldname = 'BALANCE_CREDIT'.
+  gs_field_cat_p-coltext   = '대변 잔액'(f07).
+  gs_field_cat_p-outputlen = 15.
+  gs_field_cat_p-col_pos = 60.
+  gs_field_cat_p-do_sum    = abap_on.
+  gs_field_cat_p-currency  = 'KRW'.
+  APPEND gs_field_cat_p TO gt_field_cat_p.
+
+ENDFORM.
+<font color ="#0000FF">*&---------------------------------------------------------------------*</font>
+<font color ="#0000FF">*& Form print_document</font>
+<font color ="#0000FF">*&---------------------------------------------------------------------*</font>
+FORM print_document .
+
+  " 데이터 먼저 변환
+  REFRESH gt_trial_print.
+  LOOP AT gt_trial INTO gs_trial.
+    CLEAR gs_trial_print.
+    gs_trial_print-category = gs_trial-category.
+    gs_trial_print-category_sort = gs_trial-category_sort.
+    gs_trial_print-saknr = gs_trial-saknr.
+    gs_trial_print-gltxt = gs_trial-gltxt.
+    gs_trial_print-debit = gs_trial-debit.
+    gs_trial_print-credit = gs_trial-credit.
+    gs_trial_print-balance_debit = gs_trial-balance_debit.
+    gs_trial_print-balance_credit = gs_trial-balance_credit.
+    gs_trial_print-waers = 'KRW'.
+
+    APPEND gs_trial_print TO gt_trial_print .
+
+  ENDLOOP.
+
+  DATA: fm_name               TYPE rs38l_fnam,
+        ls_control_parameters TYPE ssfctrlop,
+        ls_output_options     TYPE ssfcompop,
+        ls_otf                TYPE ssfcrescl,
+        lt_otfdata            TYPE STANDARD TABLE OF itcoo,
+        lv_pdf_xstring        TYPE xstring,
+        lt_pdf_binary         TYPE solix_tab,
+        ls_pdf_binary         TYPE solix,
+        lv_pdf_size           TYPE so_obj_len,
+        lv_fullpath           TYPE string,
+        lv_filename           TYPE string,
+        lv_path               TYPE string,
+        lv_user_action        TYPE i.
+
+  " 1. SmartForm Function Module 이름 가져옴
+  CALL FUNCTION 'SSF_FUNCTION_MODULE_NAME'
+    EXPORTING
+      formname           = 'ZCA_TRIAL_BALANCE'
+    IMPORTING
+      fm_name            = fm_name
+    EXCEPTIONS
+      no_form            = 1
+      no_function_module = 2
+      OTHERS             = 3.
+  IF sy-subrc &lt;&gt; 0.
+    MESSAGE s418 DISPLAY LIKE 'E'. " SmartForm 생성 오류
+    RETURN.
+  ENDIF.
+
+  " 2. SmartForm 출력 → OTF 데이터 받기
+  ls_control_parameters-getotf = 'X'. " &lt;-- OTF 받기 설정
+  ls_output_options-tdnoprev = 'X'.
+  ls_output_options-tddest = 'LOCL'.   " ← 출력 디바이스 사전 지정
+  ls_output_options-tdimmed = 'X'.     " ← 사용자 입력 창 비활성화 (선택사항)
+
+  CALL FUNCTION fm_name
+    EXPORTING
+      control_parameters = ls_control_parameters
+      output_options     = ls_output_options
+    IMPORTING
+      job_output_info    = ls_otf
+    TABLES
+      it_trial_balance   = gt_trial_print[]
+    EXCEPTIONS
+      formatting_error   = 1
+      internal_error     = 2
+      send_error         = 3
+      user_canceled      = 4
+      OTHERS             = 5.
+
+  IF sy-subrc &lt;&gt; 0.
+    MESSAGE s419 DISPLAY LIKE 'E'. " SmartForm 출력 실패
+    RETURN.
+  ENDIF.
+
+  lt_otfdata = ls_otf-otfdata. " 출력할 데이터
+
+  DATA pdf_table TYPE  rcl_bag_tline.
+  " 3. OTF → PDF 변환
+  CALL FUNCTION 'CONVERT_OTF'
+    EXPORTING
+      format                = 'PDF'
+      pdf_preview           = abap_on
+    IMPORTING
+      bin_filesize          = lv_pdf_size
+      bin_file              = lv_pdf_xstring
+    TABLES
+      otf                   = lt_otfdata " 출력 내용
+      lines                 = pdf_table
+    EXCEPTIONS
+      err_max_linewidth     = 1
+      err_format            = 2
+      err_conv_not_possible = 3
+      err_bad_otf           = 4
+      OTHERS                = 5.
+
+  IF sy-subrc &lt;&gt; 0.
+    MESSAGE s420 DISPLAY LIKE 'E'. " PDF 변환 실패
+    RETURN.
+  ENDIF.
+
+  " 4. 파일 저장 다이얼로그 띄우기
+  CALL METHOD cl_gui_frontend_services=&gt;file_save_dialog
+    EXPORTING
+      default_extension    = 'pdf'
+      default_file_name    = 'Trial_Balance.pdf'
+      file_filter          = 'PDF 파일 (*.pdf)|*.pdf|모든 파일 (*.*)|*.*'
+    CHANGING
+      filename             = lv_filename
+      path                 = lv_path
+      fullpath             = lv_fullpath
+      user_action          = lv_user_action
+    EXCEPTIONS
+      cntl_error           = 1
+      error_no_gui         = 2
+      not_supported_by_gui = 3
+      OTHERS               = 4.
+
+  IF sy-subrc &lt;&gt; 0 OR lv_user_action &lt;&gt; cl_gui_frontend_services=&gt;action_ok.
+    MESSAGE s412 DISPLAY LIKE 'E'. " 파일 저장이 취소되었습니다.
+    RETURN.
+  ENDIF.
+
+  " 5. PDF 다운로드
+  CALL FUNCTION 'SCMS_XSTRING_TO_BINARY'
+    EXPORTING
+      buffer     = lv_pdf_xstring
+    TABLES
+      binary_tab = lt_pdf_binary
+    EXCEPTIONS
+      failed     = 1
+      OTHERS     = 2.
+
+  IF sy-subrc &lt;&gt; 0.
+    MESSAGE s422 DISPLAY LIKE 'E'. " XSTRING 변환 실패
+    RETURN.
+  ENDIF.
+
+  CALL FUNCTION 'GUI_DOWNLOAD'
+    EXPORTING
+      filename         = lv_fullpath
+      filetype         = 'BIN'
+      codepage         = '4110'
+    TABLES
+      data_tab         = lt_pdf_binary
+    EXCEPTIONS
+      file_write_error = 1
+      OTHERS           = 2.
+
+  IF sy-subrc = 0.
+    MESSAGE s423. " PDF 저장 완료
+  ELSE.
+    MESSAGE s424 DISPLAY LIKE 'E'. " PDF 저장 실패
+  ENDIF.
+
+ENDFORM.
+
+<font color ="#0000FF">*&---------------------------------------------------------------------*</font>
+<font color ="#0000FF">*& Form save_closing_result -&gt; 실제 결산 데이터 저장하는 버튼</font>
+<font color ="#0000FF">*&---------------------------------------------------------------------*</font>
+FORM save_closing_result USING p_pyear TYPE zca_pyear
+                                p_pmonth TYPE zca_pmonth
+                                p_pweek TYPE zca_pweek.
+
+  DATA: ls_fit110 TYPE zca_fit110.
+
+  DATA ls_date TYPE zca_date.
+
+  SELECT SINGLE ptodate pfromdate
+    INTO CORRESPONDING FIELDS OF ls_date
+    FROM zca_date WHERE
+      pyear EQ p_pyear AND pmonth EQ p_pmonth AND pweek EQ p_pweek.
+
+  IF sy-datum &lt; ls_date-ptodate .
+    MESSAGE s441 DISPLAY LIKE 'E'. " 주차가 아직 끝나지 않아, 결산이 불가능합니다
+    EXIT.
+
+  ELSE.
+
+    LOOP AT gt_trial INTO DATA(ls_trial).
+
+      CLEAR ls_fit110.
+      ls_fit110-mandt         = sy-mandt.
+      ls_fit110-pyear         = p_pyear.
+      ls_fit110-pmonth        = p_pmonth.
+      ls_fit110-pweek         = p_pweek.
+      ls_fit110-saknr         = ls_trial-saknr.
+      ls_fit110-category      = ls_trial-category.
+      ls_fit110-category_sort = ls_trial-category_sort.
+      ls_fit110-gltxt         = ls_trial-gltxt.
+      ls_fit110-debit         = ls_trial-debit.
+      ls_fit110-credit        = ls_trial-credit.
+      ls_fit110-balance_debit = ls_trial-balance_debit.
+      ls_fit110-balance_credit = ls_trial-balance_credit.
+      ls_fit110-waers         = 'KRW'. " 통화코드 고정
+
+      INSERT zca_fit110 FROM ls_fit110.
+
+      IF sy-subrc &lt;&gt; 0.
+        MESSAGE s425 DISPLAY LIKE 'E'. " 결산 저장 중 오류 발생
+      ENDIF.
+
+    ENDLOOP.
+
+    " 평가 손익 추가 &gt; 먼저 임시 계정 계산
+    DATA lv_temp_balance TYPE zca_dmbtr.
+    PERFORM calculate_temp USING p_pyear p_pmonth p_pweek CHANGING lv_temp_balance.
+
+    IF lv_temp_balance NE 0.
+      CLEAR ls_fit110.
+      ls_fit110-pyear  = p_pyear.
+      ls_fit110-pmonth = p_pmonth.
+      ls_fit110-pweek  = p_pweek.
+      ls_fit110-waers  = 'KRW'.
+
+      IF lv_temp_balance &gt; 0.
+        ls_fit110-saknr  = '5100060000'.
+        ls_fit110-gltxt         = '재고자산평가손실'.
+        ls_fit110-category      = '비용'.
+        ls_fit110-category_sort = 5.
+        ls_fit110-debit         = lv_temp_balance.
+        ls_fit110-balance_debit = lv_temp_balance.
+      ELSEIF lv_temp_balance &lt; 0.
+        ls_fit110-saknr  = '4100050000'.
+        ls_fit110-gltxt          = '재고자산평가이익'.
+        ls_fit110-category       = '수익'.
+        ls_fit110-category_sort  = 4.
+        ls_fit110-credit         = abs( lv_temp_balance ).
+        ls_fit110-balance_credit = abs( lv_temp_balance ).
+      ENDIF.
+
+      INSERT zca_fit110 FROM ls_fit110.
+    ENDIF.
+
+    COMMIT WORK. " DB 반영
+    MESSAGE s426 WITH p_pyear p_pmonth p_pweek. " &년 &월 &주차 결산 결과가 성공적으로 저장되었습니다.
+
+<font color ="#0000FF">*-- 저장 완료 후 노드 아이콘 갱신 &gt; 결산 완료된 아이콘으로 !</font>
+    DATA ls_period_key TYPE ty_period_map.
+    DATA: ls_new_layout TYPE lvc_s_lacn.
+    ls_new_layout-u_style     = 'X'.
+    ls_new_layout-style       = cl_gui_column_tree=&gt;style_inactive.
+
+    ls_new_layout-u_n_image   = 'X'.
+    ls_new_layout-n_image     = '@5B@'.
+
+    ls_new_layout-u_exp_imag  = 'X'.
+    ls_new_layout-exp_image   = '@5B@'.
+    " 관련 키 찾기
+    READ TABLE gt_period_map INTO ls_period_key
+                              WITH KEY pyear = p_pyear
+                                       pmonth = p_pmonth
+                                       pweek = p_pweek.
+
+    DATA ls_result LIKE gs_result.
+    ls_result-pyear = p_pyear.
+    ls_result-pmonth = p_pmonth.
+    ls_result-pweek = p_pweek.
+
+    IF sy-subrc = 0.
+      DATA(lv_index) = sy-tabix. " i_outtab_line
+
+      CALL METHOD go_alv_tree-&gt;change_node " 노드 변경 하는 메소드 발생시키기
+        EXPORTING
+          i_node_key     = ls_period_key-node_key
+          i_outtab_line  = ls_result
+          is_node_layout = ls_new_layout.
+      CALL METHOD go_alv_tree-&gt;frontend_update.
+    ENDIF.
+  ENDIF.
+ENDFORM.
+<font color ="#0000FF">*&---------------------------------------------------------------------*</font>
+<font color ="#0000FF">*& Form retry_select_all</font>
+<font color ="#0000FF">*&---------------------------------------------------------------------*</font>
+FORM retry_select_all .
+
+<font color ="#0000FF">*  PERFORM clear_tree_data.</font>
+  PERFORM create_hierarchy.
+
+ENDFORM.
+<font color ="#0000FF">*&---------------------------------------------------------------------*</font>
+<font color ="#0000FF">*& Form show_gl_ledger : 계정 상세</font>
+<font color ="#0000FF">*&---------------------------------------------------------------------*</font>
+FORM show_gl_ledger  USING pv_saknr TYPE zca_saknr
+                           pv_gltxt TYPE zca_gltxt.
+
+  DATA: lt_item      TYPE STANDARD TABLE OF zca_fit050 WITH EMPTY KEY,
+        ls_gl_detail TYPE ty_gl_detail,
+        lv_balance   TYPE zca_dmbtr VALUE 0.
+
+  CLEAR: gt_gl_detail, lv_balance.
+  REFRESH gt_gl_detail.
+
+  " 1. 해당 계정의 아이템 조회
+  SELECT bukrs, belnr, gjahr, bschl, dmbtr, waers, bpcode
+    INTO CORRESPONDING FIELDS OF TABLE @lt_item
+    FROM zca_fit050
+    WHERE bukrs EQ '1001'
+      AND gjahr = @sy-datum+0(4)
+      AND saknr = @pv_saknr.
+
+  " 셀 색상을 다루는 Internal Table의 작업 공간
+  DATA ls_cell_color LIKE LINE OF gs_gl_detail-cell_colors.
+
+  IF sy-subrc EQ 0.
+    " 2. 주차별 헤더 기준 루프
+    LOOP AT gt_date_range INTO DATA(ls_date).
+
+      " 현재 주차 이후는 스킵
+      IF ls_date-pyear &gt; s0120-year OR
+         ( ls_date-pyear = s0120-year AND ls_date-pmonth &gt; s0120-month ) OR
+         ( ls_date-pyear = s0120-year AND ls_date-pmonth = s0120-month AND ls_date-pweek &gt; s0120-week ).
+        EXIT.
+      ENDIF.
+
+      LOOP AT gt_header ASSIGNING FIELD-SYMBOL(&lt;fs_header&gt;)
+        WHERE budat BETWEEN ls_date-pfromdate AND ls_date-ptodate.
+
+        LOOP AT lt_item ASSIGNING FIELD-SYMBOL(&lt;fs_item&gt;)
+          WHERE bukrs = &lt;fs_header&gt;-bukrs
+            AND belnr = &lt;fs_header&gt;-belnr
+            AND gjahr = &lt;fs_header&gt;-gjahr.
+
+          CLEAR ls_gl_detail.
+
+          " 주차 기준
+          ls_gl_detail-pyear  = ls_date-pyear.
+          ls_gl_detail-pmonth = ls_date-pmonth.
+          ls_gl_detail-pweek  = ls_date-pweek.
+
+          " 전표 정보
+          ls_gl_detail-budat  = &lt;fs_header&gt;-budat.
+          ls_gl_detail-belnr  = &lt;fs_item&gt;-belnr.
+
+          " 차/대변 구분
+          CASE &lt;fs_item&gt;-bschl.
+            WHEN '11' OR '21' OR '31' OR '41' OR '81'.
+<font color ="#0000FF">*            WHEN '11' OR '21' OR '31' OR '41'.</font>
+              ls_gl_detail-debit = &lt;fs_item&gt;-dmbtr.
+              ls_gl_detail-credit = 0.
+            WHEN '12' OR '22' OR '32' OR '42' OR '50'.
+<font color ="#0000FF">*            WHEN '12' OR '22' OR '32' OR '42'.</font>
+              ls_gl_detail-debit = 0.
+              ls_gl_detail-credit = &lt;fs_item&gt;-dmbtr.
+            WHEN OTHERS.
+              CLEAR: ls_gl_detail-debit, ls_gl_detail-credit.
+          ENDCASE.
+
+          " 누적 잔액
+          lv_balance += ( ls_gl_detail-debit - ls_gl_detail-credit ).
+          ls_gl_detail-balance = lv_balance.
+
+          " 거래처 및 통화
+          ls_gl_detail-waers  = &lt;fs_item&gt;-waers.
+
+          CLEAR ls_cell_color.
+
+          ls_cell_color-fname = 'BALANCE'.  " 잔액 필드명
+
+          IF ls_gl_detail-balance &gt; 0.
+            ls_cell_color-color-col = 5. " Green
+            ls_cell_color-color-int = 0.
+            ls_cell_color-color-inv = 0.
+          ELSEIF ls_gl_detail-balance &lt; 0.
+            ls_cell_color-color-col = 6. " Red
+            ls_cell_color-color-int = 0.
+            ls_cell_color-color-inv = 0.
+          ELSE.
+            ls_cell_color-color-col = 2. " White
+            ls_cell_color-color-int = 0.
+            ls_cell_color-color-inv = 0. " Inverted
+          ENDIF.
+
+          APPEND ls_cell_color TO ls_gl_detail-cell_colors.
+
+          APPEND ls_gl_detail TO gt_gl_detail.
+
+        ENDLOOP.
+      ENDLOOP.
+    ENDLOOP.
+  ENDIF.
+
+  " 팝업 호출
+  CLEAR zca_fit110.
+  zca_fit110-saknr = pv_saknr.
+  zca_fit110-gltxt = pv_gltxt.
+  s0130-total = ls_gl_detail-balance.
+  s0130-cuky = ls_gl_detail-waers.
+
+  CALL SCREEN 0130 STARTING AT 30 5.
+
+ENDFORM.
+<font color ="#0000FF">*&---------------------------------------------------------------------*</font>
+<font color ="#0000FF">*& Form create_object_0130</font>
+<font color ="#0000FF">*&---------------------------------------------------------------------*</font>
+FORM create_object_0130 .
+
+  CREATE OBJECT go_custom_container_0130
+    EXPORTING
+      container_name = 'CCON_130'.                 " Name of the Screen CustCtrl Name to Link Container To
+
+  CREATE OBJECT go_alv_0130
+    EXPORTING
+      i_parent = go_custom_container_0130.                 " Parent Container
+
+ENDFORM.
+<font color ="#0000FF">*&---------------------------------------------------------------------*</font>
+<font color ="#0000FF">*& Form set_alv_layout_0130</font>
+<font color ="#0000FF">*&---------------------------------------------------------------------*</font>
+FORM set_alv_layout_0130 .
+
+  CLEAR : gs_layout_0130, gs_variant_0130.
+
+  gs_layout_0130-sel_mode = 'A'.
+  gs_layout_0130-zebra = abap_on.
+  gs_variant_0130-report = sy-repid.
+  gs_variant_0130-handle = 'S130'.
+  gs_layout_0130-ctab_fname = 'CELL_COLORS'. " 셀 색상 정보를 다루는 필드명 전달
+  gv_save_0130 = 'A'.
+
+ENDFORM.
+<font color ="#0000FF">*&---------------------------------------------------------------------*</font>
+<font color ="#0000FF">*& Form set_alv_fieldcat_0130</font>
+<font color ="#0000FF">*&---------------------------------------------------------------------*</font>
+FORM set_alv_fieldcat_0130 .
+
+  REFRESH gt_field_cat_0130.
+
+  CLEAR gs_field_cat_0130.
+  gs_field_cat_0130-fieldname = 'PMONTH'.
+  gs_field_cat_0130-ref_field = 'PMONTH'.
+  gs_field_cat_0130-ref_table = 'ZCA_DATE'.
+  gs_field_cat_0130-coltext   = '월'.
+  gs_field_cat_0130-col_pos   = 2.
+  APPEND gs_field_cat_0130 TO gt_field_cat_0130.
+
+  CLEAR gs_field_cat_0130.
+  gs_field_cat_0130-fieldname = 'PWEEK'.
+  gs_field_cat_0130-ref_field = 'PWEEK'.
+  gs_field_cat_0130-ref_table = 'ZCA_DATE'.
+  gs_field_cat_0130-coltext   = '주차'.
+  gs_field_cat_0130-col_pos   = 3.
+  APPEND gs_field_cat_0130 TO gt_field_cat_0130.
+
+  CLEAR gs_field_cat_0130.
+  gs_field_cat_0130-ref_field = 'BUDAT'.
+  gs_field_cat_0130-ref_table = 'ZCA_FIT040'.
+  gs_field_cat_0130-fieldname = 'BUDAT'.
+  gs_field_cat_0130-coltext   = '전기일자'.
+  gs_field_cat_0130-col_pos   = 4.
+  APPEND gs_field_cat_0130 TO gt_field_cat_0130.
+
+  CLEAR gs_field_cat_0130.
+  gs_field_cat_0130-ref_field = 'BELNR'.
+  gs_field_cat_0130-ref_table = 'ZCA_FIT040'.
+  gs_field_cat_0130-fieldname = 'BELNR'.
+  gs_field_cat_0130-coltext   = '전표번호'.
+  gs_field_cat_0130-col_pos   = 5.
+  APPEND gs_field_cat_0130 TO gt_field_cat_0130.
+
+  " 금액 정보
+  CLEAR gs_field_cat_0130.
+  gs_field_cat_0130-fieldname = 'DEBIT'.
+  gs_field_cat_0130-coltext   = '차변'.
+  gs_field_cat_0130-do_sum    = 'X'.
+  gs_field_cat_0130-just      = 'R'.
+  gs_field_cat_0130-do_sum    = 'X'.
+  gs_field_cat_0130-cfieldname = 'WAERS'.
+  gs_field_cat_0130-col_pos   = 9.
+  APPEND gs_field_cat_0130 TO gt_field_cat_0130.
+
+  CLEAR gs_field_cat_0130.
+  gs_field_cat_0130-fieldname = 'CREDIT'.
+  gs_field_cat_0130-coltext   = '대변'.
+  gs_field_cat_0130-just      = 'R'.
+  gs_field_cat_0130-do_sum    = 'X'.
+  gs_field_cat_0130-cfieldname = 'WAERS'.
+  gs_field_cat_0130-col_pos   = 10.
+  APPEND gs_field_cat_0130 TO gt_field_cat_0130.
+
+  CLEAR gs_field_cat_0130.
+  gs_field_cat_0130-fieldname = 'BALANCE'.
+  gs_field_cat_0130-coltext   = '잔액'.
+  gs_field_cat_0130-just      = 'R'.
+  gs_field_cat_0130-do_sum    = 'X'.
+  gs_field_cat_0130-cfieldname = 'WAERS'.
+  gs_field_cat_0130-col_pos   = 11.
+  APPEND gs_field_cat_0130 TO gt_field_cat_0130.
+
+  CLEAR gs_field_cat_0130.
+  gs_field_cat_0130-fieldname = 'WAERS'.
+  gs_field_cat_0130-coltext   = '통화'.
+  gs_field_cat_0130-col_pos   = 12.
+  gs_field_cat_0130-currency = abap_on.
+  APPEND gs_field_cat_0130 TO gt_field_cat_0130.
+
+
+ENDFORM.
+<font color ="#0000FF">*&---------------------------------------------------------------------*</font>
+<font color ="#0000FF">*& Form set_alv_table_for_display_0130</font>
+<font color ="#0000FF">*&---------------------------------------------------------------------*</font>
+FORM set_alv_table_for_display_0130 .
+
+  CALL METHOD go_alv_0130-&gt;set_table_for_first_display
+    EXPORTING
+      is_variant      = gs_variant_0130                 " Layout
+      i_save          = gv_save_0130                 " Save Layout
+      is_layout       = gs_layout_0130                 " Layout
+    CHANGING
+      it_outtab       = gt_gl_detail                 " Output Table
+      it_fieldcatalog = gt_field_cat_0130.                  " Field Catalog
+
+
+ENDFORM.
+<font color ="#0000FF">*&---------------------------------------------------------------------*</font>
+<font color ="#0000FF">*& Form get_temp_docu</font>
+<font color ="#0000FF">*&---------------------------------------------------------------------*</font>
+FORM get_temp_docu .
+
+  " 임시계정 아이템 따로 저장
+  LOOP AT gt_date_range INTO DATA(ls_date).
+
+    LOOP AT gt_header ASSIGNING FIELD-SYMBOL(&lt;fs_header&gt;)
+      WHERE budat BETWEEN ls_date-pfromdate AND ls_date-ptodate.
+
+      LOOP AT gt_all_items INTO DATA(ls_item)
+        WHERE bukrs = &lt;fs_header&gt;-bukrs
+          AND gjahr = &lt;fs_header&gt;-gjahr
+          AND belnr = &lt;fs_header&gt;-belnr
+          AND saknr = '6100010000'.  " 임시계정만
+
+        DATA(ls_temp_combined) = VALUE ty_combined(
+          BASE CORRESPONDING #( ls_item )
+          pyear  = ls_date-pyear
+          pmonth = ls_date-pmonth
+          pweek  = ls_date-pweek
+          debit  = COND #( WHEN ls_item-bschl EQ '81' THEN ls_item-dmbtr ELSE 0 )
+          credit = COND #( WHEN ls_item-bschl EQ '50' THEN ls_item-dmbtr ELSE 0 )
+        ).
+
+        APPEND ls_temp_combined TO gt_temp_items.
+
+      ENDLOOP.
+    ENDLOOP.
+  ENDLOOP.
+
+ENDFORM.
+<font color ="#0000FF">*&---------------------------------------------------------------------*</font>
+<font color ="#0000FF">*& Form calculate_temp</font>
+<font color ="#0000FF">*&---------------------------------------------------------------------*</font>
+FORM calculate_temp  USING    p_year   TYPE zca_date-pyear
+                              p_month  TYPE zca_date-pmonth
+                              p_week   TYPE zca_date-pweek
+                    CHANGING pv_temp_balance TYPE zca_dmbtr.
+
+  DATA: lv_temp_debit  TYPE zca_dmbtr VALUE 0,
+        lv_temp_credit TYPE zca_dmbtr VALUE 0.
+
+  CLEAR: pv_temp_balance.
+
+  " 임시 계정 루프 돌리면서 선택한 주차까지 누적
+  LOOP AT gt_temp_items INTO DATA(ls_temp)
+    WHERE pyear = p_year
+      AND ( pmonth &lt; p_month
+          OR ( pmonth = p_month AND pweek &lt;= p_week ) ).
+    lv_temp_debit  += ls_temp-debit.
+    lv_temp_credit += ls_temp-credit.
+  ENDLOOP.
+
+  " 최종 잔액 계산
+  pv_temp_balance = lv_temp_debit - lv_temp_credit.
+  IF pv_temp_balance NE 0.
+    CLEAR gs_trial.
+    DATA: ls_color TYPE lvc_s_scol.
+    ls_color-fname = 'GLTXT'.
+    ls_color-color-col = col_positive.
+    ls_color-color-int = 0.
+    ls_color-color-inv = 0.
+
+    IF pv_temp_balance &gt; 0. " 양수이면 차변 = 손실
+      gs_trial-saknr          = '5100060000'.
+      gs_trial-gltxt          = '재고자산평가손실'.
+      gs_trial-category       = '비용'.
+      gs_trial-category_sort  = 5.
+      gs_trial-debit          = pv_temp_balance.
+      gs_trial-balance_debit  = pv_temp_balance.
+      gs_trial-waers          = 'KRW'.
+      APPEND ls_color TO gs_trial-cell_colors.
+      APPEND gs_trial TO gt_trial.
+
+    ELSEIF pv_temp_balance &lt; 0. " 음수이면 대변 = 이익
+      gs_trial-saknr           = '4100050000'.
+      gs_trial-gltxt           = '재고자산평가이익'.
+      gs_trial-category        = '수익'.
+      gs_trial-category_sort   = 4.
+      gs_trial-credit          = abs( pv_temp_balance ).
+      gs_trial-balance_credit  = abs( pv_temp_balance ).
+      gs_trial-waers           = 'KRW'.
+      APPEND ls_color TO gs_trial-cell_colors.
+      APPEND gs_trial TO gt_trial.
+    ENDIF.
+  ENDIF.
+
+
+
+ENDFORM.
+</pre>
+<hr>
+<font size="2" face = "Sans Serif">Extracted by Direct Download Enterprise version 1.3.1 - E.G.Mellodew. 1998-2005 UK. Sap Release 758
+</font>
+</body>
+</html>

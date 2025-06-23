@@ -1,0 +1,72 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 3.2//EN">
+<html>
+<head>
+<title>ZCA_FI100</title>
+</head>
+<body bgcolor="#FFFFE0">
+<font size="3" face = "Arial" color="#000000"><b>Code listing for: ZCA_FI100</b></font>
+<br>
+<font size="3" face = "Arial" color="#000000"><b>Description:  [FI] 계정 유형별 상세전표 조회 프로그램</b></font>
+<hr>
+<pre width="100">
+<font color ="#0000FF">*&---------------------------------------------------------------------*</font>
+<font color ="#0000FF">*& Report ZCA_FI100</font>
+<font color ="#0000FF">*&---------------------------------------------------------------------*</font>
+<font color ="#0000FF">*& [FI] 계정 유형별 상세전표 조회 프로그램</font>
+<font color ="#0000FF">*&---------------------------------------------------------------------*</font>
+REPORT ZCA_FI100 MESSAGE-ID zca_msg.
+
+<font color ="#0000FF">*&---------------------------------------------------------------------*</font>
+<font color ="#0000FF">* 선언 관련 Include</font>
+<font color ="#0000FF">*&---------------------------------------------------------------------*</font>
+include <a href ="zca_fi100_top.html">ZCA_FI100_TOP</a>. " 전역변수 선언
+include <a href ="zca_fi100_scr.html">ZCA_FI100_SCR</a>. " Selection Screen
+include <a href ="zca_fi100_cls.html">ZCA_FI100_CLS</a>. " Local Class ( Event Handler Method )
+
+
+<font color ="#0000FF">*&---------------------------------------------------------------------*</font>
+<font color ="#0000FF">* 구현 관련 Include</font>
+<font color ="#0000FF">*&---------------------------------------------------------------------*</font>
+include <a href ="zca_fi100_pbo.html">ZCA_FI100_PBO</a>. " Process Before Output
+include <a href ="zca_fi100_pai.html">ZCA_FI100_PAI</a>. " Process After Input
+include <a href ="zca_fi100_f01.html">ZCA_FI100_F01</a>. " Form Subroutines
+
+INITIALIZATION.
+
+AT SELECTION-SCREEN.
+
+START-OF-SELECTION.
+
+  PERFORM select_data.
+  PERFORM make_display_data.  " 계정 유형 설정
+  PERFORM display_data. " 작성 후 스크린 생성
+
+<font color ="#0000FF">*GUI Texts</font>
+<font color ="#0000FF">*----------------------------------------------------------</font>
+<font color ="#0000FF">* T0100 --&gt; [FI] 계정 유형별 상세전표 조회</font>
+
+<font color ="#0000FF">*Text elements</font>
+<font color ="#0000FF">*----------------------------------------------------------</font>
+<font color ="#0000FF">* T01 검색조건</font>
+
+
+<font color ="#0000FF">*Selection texts</font>
+<font color ="#0000FF">*----------------------------------------------------------</font>
+<font color ="#0000FF">* PA_BUKRS         회사코드</font>
+<font color ="#0000FF">* PA_GJAHR         회계연도</font>
+<font color ="#0000FF">* SO_BELNR         전표번호</font>
+<font color ="#0000FF">* SO_BUDAT         전기일자</font>
+
+
+<font color ="#0000FF">*Messages</font>
+<font color ="#0000FF">*----------------------------------------------------------</font>
+<font color ="#0000FF">*</font>
+<font color ="#0000FF">* Message class: ZCA_MSG</font>
+<font color ="#0000FF">*428   일반 데이터행만 클릭해주세요.</font>
+<font color ="#0000FF">*429   선택한 데이터를 찾을 수 없습니다.</font>
+</pre>
+<hr>
+<font size="2" face = "Sans Serif">Extracted by Direct Download Enterprise version 1.3.1 - E.G.Mellodew. 1998-2005 UK. Sap Release 758
+</font>
+</body>
+</html>

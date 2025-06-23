@@ -1,0 +1,137 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 3.2//EN">
+<html>
+<head>
+<title>MZCA_FI100_PAI</title>
+</head>
+<body bgcolor="#FFFFE0">
+<font size="3" face = "Arial" color="#000000"><b>Code listing for: MZCA_FI100_PAI</b></font>
+<br>
+<font size="3" face = "Arial" color="#000000"><b>Description:  PAI</b></font>
+<hr>
+<pre width="100">
+<font color ="#0000FF">*&---------------------------------------------------------------------*</font>
+<font color ="#0000FF">*& Include          MZCA_FI100_PAI</font>
+<font color ="#0000FF">*&---------------------------------------------------------------------*</font>
+<font color ="#0000FF">*&---------------------------------------------------------------------*</font>
+<font color ="#0000FF">*&      Module  USER_COMMAND_0100  INPUT</font>
+<font color ="#0000FF">*&---------------------------------------------------------------------*</font>
+MODULE user_command_0100 INPUT.
+
+  CASE ok_code.
+    WHEN 'BACK'.
+      LEAVE TO SCREEN 0.
+
+    WHEN 'H01'. " 헤더 생성
+      IF zca_fit040-blart IS INITIAL.
+        MESSAGE i400 DISPLAY LIKE 'E'. " 전표유형을 입력하세요.
+      ENDIF.
+
+      IF zca_fit040-bltxt IS INITIAL.
+        MESSAGE i401 DISPLAY LIKE 'E'. " 전표헤더텍스트를 입력하세요.
+      ENDIF.
+
+      PERFORM create_header.
+
+    WHEN 'I01'. " 아이템 생성
+      IF zca_tbsl-bschl IS INITIAL.
+        MESSAGE i402 DISPLAY LIKE 'E'. " 전기키를 입력하세요.
+      ENDIF.
+
+      IF zca_fit050-saknr IS INITIAL.
+        MESSAGE i403 DISPLAY LIKE 'E'. " 계정과목을 입력하세요.
+      ENDIF.
+
+      IF zca_fit050-dmbtr IS INITIAL OR zca_fit050-dmbtr = 0.
+        MESSAGE i404 DISPLAY LIKE 'E'. " 금액을 입력하세요.
+      ENDIF.
+
+      PERFORM create_item.
+
+    WHEN 'T01'.  " 전표 생성
+      PERFORM create_document. " 미리보기 전표를 발행해주면 될 것 같음(팝업 형태)
+
+    WHEN 'SAV'.   " 최종 전체 저장
+      PERFORM save_document.
+
+    WHEN 'CAN'.
+      " 전체 취소 -&gt; 메모리 다 비우기
+      ROLLBACK WORK.
+      CLEAR: zca_fit040, zca_fit050, zca_tbsl,
+               gt_item[], gs_item, s_money, h_money, total_money,
+               status_icon, status_text, st_icon.
+
+      go_alv_grid-&gt;refresh_table_display( ).
+
+      MESSAGE s405. " 전표 입력이 취소되었습니다.
+
+  ENDCASE.
+
+ENDMODULE.
+<font color ="#0000FF">*&---------------------------------------------------------------------*</font>
+<font color ="#0000FF">*&      Module  EXIT  INPUT</font>
+<font color ="#0000FF">*&---------------------------------------------------------------------*</font>
+MODULE exit INPUT.
+
+  CASE ok_code.
+
+    WHEN 'ALL'.
+      CALL TRANSACTION 'ZCAFI040'. " 전표 조회 프로그램으로 이동
+
+    WHEN 'SEMI'.
+      CALL TRANSACTION 'ZCAFI030'. " 임시 전표 프로그램으로 이동
+
+    WHEN 'EXIT'.
+      LEAVE PROGRAM.
+    WHEN 'CANC'.
+      LEAVE TO SCREEN 0.
+  ENDCASE.
+
+ENDMODULE.
+<font color ="#0000FF">*&---------------------------------------------------------------------*</font>
+<font color ="#0000FF">*&      Module  SET_SH_TEXT  INPUT</font>
+<font color ="#0000FF">*&---------------------------------------------------------------------*</font>
+MODULE set_sh_text INPUT.
+
+  zca_tbsl-bschl = zca_fit050-bschl.
+<font color ="#0000FF">*  DATA lv_sh TYPE c.</font>
+<font color ="#0000FF">*  SELECT SINGLE indi_cd</font>
+<font color ="#0000FF">*  INTO lv_sh</font>
+<font color ="#0000FF">*  FROM zca_tbsl</font>
+<font color ="#0000FF">*  WHERE bschl = zca_fit050-bschl.</font>
+<font color ="#0000FF">*</font>
+<font color ="#0000FF">*  IF sy-subrc &lt;&gt; 0.</font>
+<font color ="#0000FF">*    CLEAR sh_text.</font>
+<font color ="#0000FF">*  ELSE.</font>
+<font color ="#0000FF">*    IF lv_sh EQ 'S'.</font>
+<font color ="#0000FF">*      sh_text = 'S 차변'.</font>
+<font color ="#0000FF">*    ELSE .</font>
+<font color ="#0000FF">*      sh_text = 'H 대변'.</font>
+<font color ="#0000FF">*    ENDIF.</font>
+<font color ="#0000FF">*  ENDIF.</font>
+
+ENDMODULE.
+
+<font color ="#0000FF">*&---------------------------------------------------------------------*</font>
+<font color ="#0000FF">*&      입력 여부 검증 관련 모듈들</font>
+<font color ="#0000FF">*&---------------------------------------------------------------------*</font>
+
+MODULE check_blart INPUT.
+  CHECK ok_code EQ 'H01'.
+
+  IF zca_fit040-blart IS INITIAL.
+    MESSAGE e400. " 전표유형을 입력하세요.
+  ENDIF.
+ENDMODULE.
+
+MODULE check_bltxt INPUT.
+  CHECK ok_code EQ 'H01'.
+  IF zca_fit040-bltxt IS INITIAL.
+    MESSAGE e401. " 전표헤더텍스트를 입력하세요.
+  ENDIF.
+ENDMODULE.
+</pre>
+<hr>
+<font size="2" face = "Sans Serif">Extracted by Direct Download Enterprise version 1.3.1 - E.G.Mellodew. 1998-2005 UK. Sap Release 758
+</font>
+</body>
+</html>

@@ -1,0 +1,61 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 3.2//EN">
+<html>
+<head>
+<title>ZCA_FI_CAL_COST</title>
+</head>
+<body bgcolor="#FFFFE0">
+<font size="3" face = "Arial" color="#000000"><b>Code listing for function: ZCA_FI_CAL_COST</b></font>
+<br>
+<font size="3" face = "Arial" color="#000000"><b>Description:  원가 계산 함수 (MARD Table)</b></font>
+<hr>
+<pre width="100">
+FUNCTION ZCA_FI_CAL_COST.
+<font color ="#0000FF">*"----------------------------------------------------------------------</font>
+<font color ="#0000FF">*"*"Local Interface:</font>
+<font color ="#0000FF">*"  IMPORTING</font>
+<font color ="#0000FF">*"     REFERENCE(IV_MATNR) TYPE  ZCA_MATNR</font>
+<font color ="#0000FF">*"     REFERENCE(IV_WERKS) TYPE  ZCA_WERKS</font>
+<font color ="#0000FF">*"     REFERENCE(IV_LGORT) TYPE  ZCA_LGORT</font>
+<font color ="#0000FF">*"  EXPORTING</font>
+<font color ="#0000FF">*"     REFERENCE(EV_COST) TYPE  ZCA_TOPRI</font>
+<font color ="#0000FF">*"     REFERENCE(EV_WAERS) TYPE  ZCA_WAERS</font>
+<font color ="#0000FF">*"----------------------------------------------------------------------</font>
+
+<font color ="#0000FF">*       <a href ="global-zca_fi_cal_cost.html">Global data declarations</a></font>
+TYPES : BEGIN OF ty_cal_cost,
+        TSTOCK TYPE ZCA_TSTOCK,  " 총 재고량
+        TOPRI  TYPE ZCA_TOPRI,   " 총 가격
+        waers  TYPE zca_waers,   " 통화코드
+        END OF ty_cal_cost.
+
+DATA : lv_cal_cost TYPE ty_cal_cost.  " Select해올 변수
+
+SELECT SINGLE TSTOCK TOPRI waers
+       FROM zca_mard
+       INTO lv_cal_cost
+       WHERE MATNR EQ IV_MATNR
+         AND WERKS EQ IV_WERKS
+         AND LGORT EQ IV_LGORT.
+
+  " 최종 가격 = 총 금액 / 총 재고량
+  IF lv_cal_cost-tstock EQ 0.
+    EXIT.
+  ELSE.
+   ev_cost = lv_cal_cost-topri / lv_cal_cost-tstock.
+   EV_WAERS = lv_cal_cost-waers.
+  ENDIF.
+
+ENDFUNCTION.
+
+
+<font color ="#0000FF">*Messages</font>
+<font color ="#0000FF">*----------------------------------------------------------</font>
+<font color ="#0000FF">*</font>
+<font color ="#0000FF">* Message class: Hard coded</font>
+<font color ="#0000FF">*   원자재는 판매할 수 없습니다. (E01)</font>
+</pre>
+<hr>
+<font size="2" face = "Sans Serif">Extracted by Direct Download Enterprise version 1.3.1 - E.G.Mellodew. 1998-2005 UK. Sap Release 758
+</font>
+</body>
+</html>

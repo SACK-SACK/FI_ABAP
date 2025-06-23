@@ -1,0 +1,81 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 3.2//EN">
+<html>
+<head>
+<title>ZCA_FI040_TOP</title>
+</head>
+<body bgcolor="#FFFFE0">
+<font size="3" face = "Arial" color="#000000"><b>Code listing for: ZCA_FI040_TOP</b></font>
+<br>
+<font size="3" face = "Arial" color="#000000"><b>Description:  TOP</b></font>
+<hr>
+<pre width="100">
+<font color ="#0000FF">*&---------------------------------------------------------------------*</font>
+<font color ="#0000FF">*& Include          ZCA_FI040_TOP</font>
+<font color ="#0000FF">*&---------------------------------------------------------------------*</font>
+
+<font color ="#0000FF">* 사용할 테이블</font>
+TABLES : zca_fit040,  "전표 헤더
+         zca_fit050.  "전표 아이템
+
+<font color ="#0000FF">**---------------------------------------------------------------------*</font>
+<font color ="#0000FF">** ALV 1 : 전표 Header용 타입 및 데이터 선언</font>
+<font color ="#0000FF">**---------------------------------------------------------------------*</font>
+TYPES : BEGIN OF ty_HEADER.
+          include structure <a href ="zca_fit040/dictionary-zca_fit040.html">zca_fit040</a>.  " 전표 헤더 구조 포함
+TYPES :   b_text TYPE zca_descr,    " 전표유형 설명 텍스트 (ZCA_FIT030에서 가져옴)
+        END OF ty_header.
+
+DATA: gt_fit040 TYPE TABLE OF ty_header,  " 전표 헤더 내부 테이블
+      gs_fit040 TYPE ty_header.           " WA
+
+<font color ="#0000FF">**---------------------------------------------------------------------*</font>
+<font color ="#0000FF">** ALV 2 : 전표 Item용 타입 및 데이터 선언</font>
+<font color ="#0000FF">**---------------------------------------------------------------------*</font>
+TYPES : BEGIN OF ty_item.
+          include structure <a href ="zca_fit050/dictionary-zca_fit050.html">zca_fit050</a>.  " 전표 아이템 구조 포함
+TYPES :   icon     TYPE icon-id,    " 아이콘 필드 : 반제 여부
+          key_text TYPE zca_bstxt,  " 전기키 텍스트 (예: 차변/대변 설명)
+          debit    TYPE zca_dmbtr,  " 차변 금액
+          credit   TYPE zca_dmbtr,  " 대변 금액
+        END OF ty_item.
+
+DATA : gt_fit050 TYPE TABLE OF ty_item,
+       gs_fit050 TYPE ty_item.
+
+
+<font color ="#0000FF">**---------------------------------------------------------------------*</font>
+<font color ="#0000FF">** Screen 관련 선언</font>
+<font color ="#0000FF">**---------------------------------------------------------------------*</font>
+<font color ="#0000FF">* 화면 및 ALV 출력에 필요한 변수를 선언</font>
+DATA ok_code TYPE sy-ucomm. " 뒤로가기, 나가기, 취소하기 등 사용자 액션에 대한 펑션코드값
+
+<font color ="#0000FF">*---------------------------------------------------------------------*</font>
+<font color ="#0000FF">* ALV관련 선언</font>
+<font color ="#0000FF">*---------------------------------------------------------------------*</font>
+<font color ="#0000FF">* ALV Layout을 다루는 Structure 변수</font>
+DATA : gs_layout_t TYPE lvc_s_layo,
+       gs_layout_b TYPE lvc_s_layo.
+
+<font color ="#0000FF">* ALV Variant를 다루는 Structure 변수</font>
+DATA : gs_variant_t TYPE disvariant,
+       gs_variant_b TYPE disvariant,
+       gs_save_t    TYPE c,
+       gs_save_b    TYPE c.
+
+<font color ="#0000FF">* ALV에 출력할 필드 정보를 구성하고 ALV에게 전달한다.</font>
+DATA: gs_field_cat   TYPE lvc_s_fcat,   " Structure
+      gt_field_cat_t TYPE lvc_t_fcat,
+      gt_field_cat_b TYPE lvc_t_fcat.
+
+<font color ="#0000FF">* Container / Grid</font>
+DATA: go_container_t TYPE REF TO cl_gui_custom_container,  "
+      go_alv_grid_t  TYPE REF TO cl_gui_alv_grid.
+
+DATA: go_container_b TYPE REF TO cl_gui_custom_container,  "
+      go_alv_grid_b  TYPE REF TO cl_gui_alv_grid.
+</pre>
+<hr>
+<font size="2" face = "Sans Serif">Extracted by Direct Download Enterprise version 1.3.1 - E.G.Mellodew. 1998-2005 UK. Sap Release 758
+</font>
+</body>
+</html>

@@ -1,0 +1,541 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 3.2//EN">
+<html>
+<head>
+<title>ZCA_FI040_F01</title>
+</head>
+<body bgcolor="#FFFFE0">
+<font size="3" face = "Arial" color="#000000"><b>Code listing for: ZCA_FI040_F01</b></font>
+<br>
+<font size="3" face = "Arial" color="#000000"><b>Description:  F01</b></font>
+<hr>
+<pre width="100">
+<font color ="#0000FF">*&---------------------------------------------------------------------*</font>
+<font color ="#0000FF">*& Include          ZCA_FI040_F01</font>
+<font color ="#0000FF">*&---------------------------------------------------------------------*</font>
+<font color ="#0000FF">*&---------------------------------------------------------------------*</font>
+<font color ="#0000FF">*& Form select_data</font>
+<font color ="#0000FF">*&---------------------------------------------------------------------*</font>
+FORM select_data .  "검색 조건에 따른 Data Select
+
+<font color ="#0000FF">* ZCA_FIT040 테이블에서 전표 헤더 데이터 조회</font>
+  SELECT  bukrs, belnr, gjahr, blart, bldat,budat, bltxt, xblnr
+          FROM zca_fit040
+          WHERE bukrs EQ @pa_bukrs    " 회사 코드 필터
+            AND belnr IN @so_num      " 선택된 전표 번호들 (range)
+            AND gjahr EQ @pa_year     " 선택된 회계 연도
+          INTO CORRESPONDING FIELDS OF TABLE @gt_fit040.  " 결과를 내부 테이블에 담음
+
+<font color ="#0000FF">* 조회된 전표 헤더 각각에 대해 전표유형 텍스트 보완</font>
+  LOOP AT gt_fit040 INTO gs_fit040.
+
+   " ZCA_FIT030 테이블에서 전표유형(blart)에 해당하는 설명(descr)을 조회
+    SELECT SINGLE descr
+      INTO @gs_fit040-b_text
+      FROM zca_fit030
+      WHERE blart = @gs_fit040-blart.
+
+    " 조회된 descr을 포함해 구조를 갱신
+    MODIFY gt_fit040 FROM gs_fit040.
+
+  ENDLOOP.
+
+
+ENDFORM.
+<font color ="#0000FF">*&---------------------------------------------------------------------*</font>
+<font color ="#0000FF">*& Form display_data</font>
+<font color ="#0000FF">*&---------------------------------------------------------------------*</font>
+FORM display_data .
+
+  CALL SCREEN 0100. "Screen 0100 호출
+
+ENDFORM.
+<font color ="#0000FF">*&---------------------------------------------------------------------*</font>
+<font color ="#0000FF">*& Form CREATE_OBJECT_0100</font>
+<font color ="#0000FF">*&---------------------------------------------------------------------*</font>
+FORM create_object_0100 .
+
+  " ALV 화면 구성: 상단(Top) 영역에 ALV 컨테이너 및 Grid 생성
+  PERFORM create_screen_obj USING go_container_t  " 상단용 커스터마이즈된 컨테이너 객체
+                                  go_alv_grid_t   " 상단용 ALV Grid 객체
+                                  'CCONT'.        " 화면에 정의된 상단 커스터마이즈 컨트롤 이름
+  " ALV 화면 구성: 하단(Bottom) 영역에 ALV 컨테이너 및 Grid 생성
+  PERFORM create_screen_obj USING go_container_b  " 하단용 커스터마이즈된 컨테이너 객
+                                  go_alv_grid_b   " 하단용 ALV Grid 객체
+                                  'CCONB'.        " 화면에 정의된 하단 커스터마이즈 컨트롤 이름
+
+ENDFORM.
+
+<font color ="#0000FF">*&---------------------------------------------------------------------*</font>
+<font color ="#0000FF">*& Form set_alv_layout_0100</font>
+<font color ="#0000FF">*&---------------------------------------------------------------------*</font>
+FORM set_alv_layout_0100 .
+
+  " Top ALV (Header 영역) Layout 설정
+  CLEAR gs_layout_t.
+
+  gs_layout_t-sel_mode = 'D'.       " 복수행 선택 가능, 행 선택 컬럼 표시, 셀 단위 선택 가능
+  gs_layout_t-zebra = abap_on.      " 얼룩무늬 모드 (줄 단위 배경색 교차)
+  gs_layout_t-cwidth_opt = abap_on. " 열 넓이 최적화
+
+<font color ="#0000FF">* Variant 관련</font>
+  gs_variant_t-report    = sy-repid. " 현재 프로그램 이름 기준으로 저장
+  gs_variant_t-handle    = '0100T'.  " Top ALV 고유 식별자
+  gs_save_t              = 'A'.      " 사용자 및 글로벌 저장 가능 (A: 모두 가능, U: 사용자만)
+
+
+  CLEAR gs_layout_b.
+
+  gs_layout_b-sel_mode = 'D'.        " 복수행 선택 가능, 행 선택 컬럼 표시, 셀 단위 선택 가능
+  gs_layout_b-zebra = abap_on.       " 얼룩무늬 모드 (줄 단위 배경색 교차)
+  gs_layout_b-cwidth_opt = abap_on.  " 열 넓이 최적화
+
+
+<font color ="#0000FF">* Variant 관련</font>
+  gs_variant_b-report    = sy-repid. " 현재 프로그램 이름 기준으로 저장
+  gs_variant_b-handle    = '0100B'.  " Bottom ALV 고유 식별자
+  gs_save_b              = 'A'.      " 사용자 및 글로벌 저장 가능 (A: 모두 가능, U: 사용자만)
+
+ENDFORM.
+
+<font color ="#0000FF">*&---------------------------------------------------------------------*</font>
+<font color ="#0000FF">*& Form set_alv_field_cat_0100</font>
+<font color ="#0000FF">*&---------------------------------------------------------------------*</font>
+FORM set_alv_field_cat_0100 .
+  REFRESH gt_field_cat_t. " 기존 필드카탈로그 초기화
+
+  " 회사코드 (BUKRS)
+  CLEAR gs_field_cat.
+  gs_field_cat-fieldname = 'BUKRS'.     " 필드명: 회사 코드
+  gs_field_cat-col_pos = 1.             " 컬럼 위치
+  gs_field_cat-coltext = '회사코드'.    " 컬럼 헤더 텍스트
+  gs_field_cat-key = abap_on.           " Key 필드 표시
+  APPEND gs_field_cat TO gt_field_cat_t.
+
+  CLEAR gs_field_cat.
+  gs_field_cat-fieldname = 'BELNR'.       " 필드명 : 전표 번호
+  gs_field_cat-key = abap_on.             " Key 필드 표시
+  APPEND gs_field_cat TO gt_field_cat_t.
+
+  CLEAR gs_field_cat.
+  gs_field_cat-fieldname = 'BLART'.      " 필드명 : 전표 유형
+  gs_field_cat-coltext = '전표유형'.
+  gs_field_cat-hotspot = abap_on.
+  APPEND gs_field_cat TO gt_field_cat_t.
+
+  CLEAR gs_field_cat.
+  gs_field_cat-fieldname = 'B_TEXT'. " 전표유형명
+  gs_field_cat-col_pos = 5.
+  gs_field_cat-coltext = '전표유형명'.
+  APPEND gs_field_cat TO gt_field_cat_t.
+
+  CLEAR gs_field_cat.
+  gs_field_cat-fieldname = 'XBLNR'.      " 필드명 : 참조 문서
+  gs_field_cat-coltext = '참조문서'.
+  gs_field_cat-hotspot = abap_on.
+  APPEND gs_field_cat TO gt_field_cat_t.
+
+  PERFORM remove_timestamp TABLES gt_field_cat_t.
+
+
+  " Bottom (아래) 쪽 Icon추가를 위한 Field Catalog
+  REFRESH gt_field_cat_b.
+  CLEAR gs_field_cat.
+  gs_field_cat-fieldname = 'ICON'.
+  gs_field_cat-col_pos = 1.
+  gs_field_cat-coltext = '반제여부'.
+  gs_field_cat-icon = abap_on.
+  APPEND gs_field_cat TO gt_field_cat_b.
+
+  CLEAR gs_field_cat.
+  gs_field_cat-fieldname = 'BUKRS'.
+  gs_field_cat-col_pos = 2.
+  gs_field_cat-coltext = '회사코드'.
+  gs_field_cat-key = abap_on.
+  APPEND gs_field_cat TO gt_field_cat_b.
+
+  CLEAR gs_field_cat.
+  gs_field_cat-fieldname = 'BELNR'.
+  gs_field_cat-col_pos = 3.
+  gs_field_cat-coltext = '전표번호'.
+  gs_field_cat-key = abap_on.
+  APPEND gs_field_cat TO gt_field_cat_b.
+
+  CLEAR gs_field_cat.
+  gs_field_cat-fieldname = 'GJAHR'.
+  gs_field_cat-col_pos = 4.
+  gs_field_cat-coltext = '회계연도'.
+  gs_field_cat-key = abap_on.
+  APPEND gs_field_cat TO gt_field_cat_b.
+
+  CLEAR gs_field_cat.
+  gs_field_cat-fieldname = 'ITNUM'.
+  gs_field_cat-col_pos = 5.
+  gs_field_cat-coltext = '아이템 번호'.
+  gs_field_cat-key = abap_on.
+  APPEND gs_field_cat TO gt_field_cat_b.
+
+  CLEAR gs_field_cat.
+  gs_field_cat-fieldname = 'BSCHL'.
+  gs_field_cat-col_pos = 6.
+  gs_field_cat-coltext = '전기키'.
+  APPEND gs_field_cat TO gt_field_cat_b.
+
+  CLEAR gs_field_cat.
+  gs_field_cat-fieldname = 'KEY_TEXT'.
+  gs_field_cat-col_pos = 7.
+  gs_field_cat-coltext = '전기키 설명'.
+  APPEND gs_field_cat TO gt_field_cat_b.
+
+  " 반제일자는 보이지 않도록 (보일 필요가 없음)
+  CLEAR gs_field_cat.
+  gs_field_cat-fieldname = 'AUGDT'.
+  gs_field_cat-no_out = abap_on.
+  APPEND gs_field_cat TO gt_field_cat_b.
+
+  PERFORM remove_timestamp TABLES gt_field_cat_b.
+
+ENDFORM.
+
+<font color ="#0000FF">*&---------------------------------------------------------------------*</font>
+<font color ="#0000FF">*& Form select_belnr</font>
+<font color ="#0000FF">*&---------------------------------------------------------------------*</font>
+FORM select_belnr USING lv_belnr TYPE zca_fit040-belnr.
+
+  SELECT SINGLE * INTO gs_fit040
+    FROM zca_fit040
+    WHERE belnr = lv_belnr.
+
+  zca_fit040-bukrs = gs_fit040-bukrs.
+  zca_fit040-belnr = gs_fit040-belnr.
+  zca_fit040-gjahr = gs_fit040-gjahr.
+  zca_fit040-blart = gs_fit040-blart.
+
+  SELECT * INTO TABLE gt_fit050
+    FROM zca_fit050
+    WHERE belnr = lv_belnr.
+
+  LOOP AT gt_fit050 INTO gs_fit050.
+
+    " 전기키 텍스트를 받아옴
+    SELECT SINGLE bstxt INTO gs_fit050-key_text
+                        FROM zca_tbsl
+                        WHERE bschl EQ gs_fit050-bschl.
+
+    " 반제 여부가 비워져 있으면 -&gt; led_red 아이콘
+    IF gs_fit050-augdt IS INITIAL.
+      gs_fit050-icon = icon_led_red.
+    ELSE. " 반제 여부가 비워져 있지 않으면 -&gt; led_green 아이콘
+      gs_fit050-icon = icon_led_green.
+    ENDIF.
+
+    IF gs_fit050-bschl EQ '11'
+      OR gs_fit050-bschl EQ '21'
+      OR gs_fit050-bschl EQ '31'
+      OR gs_fit050-bschl EQ '41'
+      OR gs_fit050-bschl EQ '81' . " 차변
+      gs_fit050-debit = gs_fit050-dmbtr.
+    ELSE. " 대변
+      gs_fit050-credit = gs_fit050-dmbtr.
+    ENDIF.
+
+    MODIFY gt_fit050 FROM gs_fit050.
+  ENDLOOP.
+
+ENDFORM.
+
+<font color ="#0000FF">*&---------------------------------------------------------------------*</font>
+<font color ="#0000FF">*& Form SET_HANDLER_0100</font>
+<font color ="#0000FF">*&---------------------------------------------------------------------*</font>
+FORM set_handler .
+  SET HANDLER lcl_event_event_handler=&gt;on_hotspot_click FOR go_alv_grid_t.
+  SET HANDLER lcl_event_event_handler=&gt;on_user_command FOR go_alv_grid_t.
+  SET HANDLER lcl_event_event_handler=&gt;on_toolbar FOR go_alv_grid_t.
+ENDFORM.
+
+<font color ="#0000FF">*&---------------------------------------------------------------------*</font>
+<font color ="#0000FF">*& Form CREATE_SCREEN_OBJ</font>
+<font color ="#0000FF">*&---------------------------------------------------------------------*</font>
+FORM create_screen_obj  USING  po_container TYPE REF TO cl_gui_custom_container
+                               po_alv_grid TYPE REF TO cl_gui_alv_grid
+                               VALUE(pv_container_name).
+
+  " 화면에 있는 Custom Control을 참조하여 컨테이너 객체 생성
+  CREATE OBJECT po_container
+    EXPORTING
+      container_name = pv_container_name. " 스크린의 컨트롤 이름을 기반으로 생성
+
+  " 위에서 생성한 컨테이너를 부모로 하여 ALV Grid 객체 생성
+  CREATE OBJECT po_alv_grid
+    EXPORTING
+      i_parent = po_container. " 해당 컨테이너 위에 ALV Grid를 붙임
+
+
+
+ENDFORM.
+<font color ="#0000FF">*&---------------------------------------------------------------------*</font>
+<font color ="#0000FF">*& Form remove_timestamp</font>
+<font color ="#0000FF">*&---------------------------------------------------------------------*</font>
+FORM remove_timestamp  TABLES  pt_field_cat.
+
+  CLEAR gs_field_cat.
+  gs_field_cat-fieldname = 'ERNAM'.
+  gs_field_cat-no_out = abap_on.
+  APPEND gs_field_cat TO pt_field_cat.
+
+  CLEAR gs_field_cat.
+  gs_field_cat-fieldname = 'ERDAT'.
+  gs_field_cat-no_out = abap_on.
+  APPEND gs_field_cat TO pt_field_cat.
+
+  CLEAR gs_field_cat.
+  gs_field_cat-fieldname = 'ERZET'.
+  gs_field_cat-no_out = abap_on.
+  APPEND gs_field_cat TO pt_field_cat.
+
+  CLEAR gs_field_cat.
+  gs_field_cat-fieldname = 'AENAM'.
+  gs_field_cat-no_out = abap_on.
+  APPEND gs_field_cat TO pt_field_cat.
+
+  CLEAR gs_field_cat.
+  gs_field_cat-fieldname = 'AEDAT'.
+  gs_field_cat-no_out = abap_on.
+  APPEND gs_field_cat TO pt_field_cat.
+
+  CLEAR gs_field_cat.
+  gs_field_cat-fieldname = 'AEZET'.
+  gs_field_cat-no_out = abap_on.
+  APPEND gs_field_cat TO pt_field_cat.
+
+
+
+ENDFORM.
+<font color ="#0000FF">*&---------------------------------------------------------------------*</font>
+<font color ="#0000FF">*& Form set_alv_layout_t</font>
+<font color ="#0000FF">*&---------------------------------------------------------------------*</font>
+FORM set_alv_layout_t.
+
+  CLEAR gs_layout_t.
+
+  gs_layout_t-sel_mode = 'D'. " 복수행 선택 + 행 선택 칼럼 생성 + ANY 셀 선택 가능
+  gs_layout_t-zebra = abap_on. " 얼룩모드
+  gs_layout_t-cwidth_opt = abap_on. " 열 넓이 최적화
+
+<font color ="#0000FF">* Variant 관련</font>
+  gs_variant_t-report    = sy-repid. " 저장 가능하도록 설정
+  gs_variant_t-handle    = 'CCOT'.
+<font color ="#0000FF">*  gs_variant-handle 설정해줘야 함</font>
+  gs_save_t             = 'A'.
+
+ENDFORM.
+<font color ="#0000FF">*&---------------------------------------------------------------------*</font>
+<font color ="#0000FF">*& Form set_alv_field_cat_t</font>
+<font color ="#0000FF">*&---------------------------------------------------------------------*</font>
+FORM set_alv_field_cat_t .
+
+  REFRESH gt_field_cat_t.
+
+  CLEAR gs_field_cat.
+  gs_field_cat-fieldname = 'BUKRS'. " 회사 코드 필드
+  gs_field_cat-col_pos = 1.
+  gs_field_cat-coltext = '회사코드'.
+  gs_field_cat-key = abap_on. " Key 필드 표시
+  APPEND gs_field_cat TO gt_field_cat_t.
+
+  CLEAR gs_field_cat.
+  gs_field_cat-fieldname = 'BELNR'. " 전표 번호 필드
+  gs_field_cat-col_pos = 2.
+  gs_field_cat-key = abap_on. " Key 필드 표시
+  APPEND gs_field_cat TO gt_field_cat_t.
+
+  CLEAR gs_field_cat.
+  gs_field_cat-fieldname = 'GJAHR'. " 회계 연도 필드
+  gs_field_cat-col_pos = 3.
+  gs_field_cat-just      = 'L'.      " 왼쪽 정렬 (Left) -&gt; 연도만 오른쪽 정렬 되어있어서
+  gs_field_cat-key = abap_on. " Key 필드 표시
+  APPEND gs_field_cat TO gt_field_cat_t.
+
+  CLEAR gs_field_cat.
+  gs_field_cat-fieldname = 'B_TEXT'. " 회계 연도 필드
+  gs_field_cat-col_pos = 5.
+  gs_field_cat-coltext = '전표유형명'.
+  APPEND gs_field_cat TO gt_field_cat_t.
+
+  CLEAR gs_field_cat.
+  gs_field_cat-fieldname = 'XBLNR'. " 참고 문서
+  gs_field_cat-hotspot = 'X'.
+  APPEND gs_field_cat TO gt_field_cat_t.
+
+  PERFORM remove_timestamp TABLES gt_field_cat_t.
+
+
+ENDFORM.
+<font color ="#0000FF">*&---------------------------------------------------------------------*</font>
+<font color ="#0000FF">*& Form set_handler_t</font>
+<font color ="#0000FF">*&---------------------------------------------------------------------*</font>
+FORM set_handler_t .
+
+  SET HANDLER lcl_event_event_handler=&gt;on_hotspot_click FOR go_alv_grid_t.
+  SET HANDLER lcl_event_event_handler=&gt;on_user_command FOR go_alv_grid_t.
+  SET HANDLER lcl_event_event_handler=&gt;on_toolbar FOR go_alv_grid_t.
+  SET HANDLER lcl_event_event_handler=&gt;on_double_click FOR go_alv_grid_t.
+
+ENDFORM.
+<font color ="#0000FF">*&---------------------------------------------------------------------*</font>
+<font color ="#0000FF">*& Form set_alv_table_for_display</font>
+<font color ="#0000FF">*&---------------------------------------------------------------------*</font>
+<font color ="#0000FF">*& text</font>
+<font color ="#0000FF">*&---------------------------------------------------------------------*</font>
+<font color ="#0000FF">*&      --&gt; GT_FIT040</font>
+<font color ="#0000FF">*&      --&gt; GO_ALV_GRID_T</font>
+<font color ="#0000FF">*&      --&gt; P_</font>
+<font color ="#0000FF">*&      --&gt; GS_LAYOUT</font>
+<font color ="#0000FF">*&      --&gt; GS_VARIANT</font>
+<font color ="#0000FF">*&      --&gt; GS_SAVE</font>
+<font color ="#0000FF">*&      --&gt; GT_FIELD_CAT</font>
+<font color ="#0000FF">*&---------------------------------------------------------------------*</font>
+FORM set_alv_table_for_display  USING  pt_table          TYPE STANDARD TABLE
+                                        po_alv_grid       TYPE REF TO cl_gui_alv_grid
+                                        pv_structure_name TYPE c
+                                        ps_layout         TYPE lvc_s_layo
+                                        ps_variant        TYPE disvariant
+                                        pv_save           TYPE c
+                                        pt_field_cat      TYPE STANDARD TABLE .
+
+  CALL METHOD po_alv_grid-&gt;set_table_for_first_display
+    EXPORTING
+      i_structure_name = pv_structure_name    " Internal Output Table Structure Name
+      is_variant       = ps_variant           " Layout
+      i_save           = pv_save              " Save Layout
+      is_layout        = ps_layout            " Layout
+    CHANGING
+      it_outtab        = pt_table             " Output Table
+      it_fieldcatalog  = pt_field_cat.        " Field Catalog
+
+      IF SY-SUBRC &lt;&gt; 0.
+       MESSAGE ID SY-MSGID TYPE SY-MSGTY NUMBER SY-MSGNO
+       WITH SY-MSGV1 SY-MSGV2 SY-MSGV3 SY-MSGV4.
+      ENDIF.
+
+
+ENDFORM.
+<font color ="#0000FF">*&---------------------------------------------------------------------*</font>
+<font color ="#0000FF">*& Form set_alv_layout_b</font>
+<font color ="#0000FF">*&---------------------------------------------------------------------*</font>
+FORM set_alv_layout_b .
+
+  CLEAR gs_layout_b.
+
+  gs_layout_b-sel_mode = 'D'. " 복수행 선택 + 행 선택 칼럼 생성 + ANY 셀 선택 가능
+  gs_layout_b-zebra = abap_on. " 얼룩모드
+  gs_layout_b-cwidth_opt = abap_on. " 열 넓이 최적화
+
+
+<font color ="#0000FF">* Variant 관련</font>
+  gs_variant_b-report    = sy-repid. " 저장 가능하도록 설정
+  gs_variant_b-handle    = 'CCOB'.
+  gs_save_b              = 'A'.      " 모두 저장 가능 모드
+
+ENDFORM.
+<font color ="#0000FF">*&---------------------------------------------------------------------*</font>
+<font color ="#0000FF">*& Form set_alv_field_cat_b</font>
+<font color ="#0000FF">*&---------------------------------------------------------------------*</font>
+FORM set_alv_field_cat_b .
+
+
+  " Bottom (아래) 쪽 Icon추가를 위한 Field Catalog
+  REFRESH gt_field_cat_b.
+  CLEAR gs_field_cat.
+  gs_field_cat-fieldname = 'ICON'.
+  gs_field_cat-col_pos = 1.
+  gs_field_cat-coltext = '반제여부'.
+  gs_field_cat-icon = abap_on.
+  APPEND gs_field_cat TO gt_field_cat_b.
+
+  CLEAR gs_field_cat.
+  gs_field_cat-fieldname = 'BUKRS'.
+  gs_field_cat-col_pos = 2.
+  gs_field_cat-coltext = '회사코드'.
+  gs_field_cat-key = abap_on.
+  APPEND gs_field_cat TO gt_field_cat_b.
+
+  CLEAR gs_field_cat.
+  gs_field_cat-fieldname = 'BELNR'.
+  gs_field_cat-col_pos = 3.
+  gs_field_cat-coltext = '전표번호'.
+  gs_field_cat-key = abap_on.
+  APPEND gs_field_cat TO gt_field_cat_b.
+
+  CLEAR gs_field_cat.
+  gs_field_cat-fieldname = 'GJAHR'.
+  gs_field_cat-col_pos = 4.
+  gs_field_cat-coltext = '회계연도'.
+  gs_field_cat-key = abap_on.
+  APPEND gs_field_cat TO gt_field_cat_b.
+
+  CLEAR gs_field_cat.
+  gs_field_cat-fieldname = 'ITNUM'.
+  gs_field_cat-col_pos = 5.
+  gs_field_cat-coltext = '아이템 번호'.
+  gs_field_cat-key = abap_on.
+  APPEND gs_field_cat TO gt_field_cat_b.
+
+  CLEAR gs_field_cat.
+  gs_field_cat-fieldname = 'BSCHL'.
+  gs_field_cat-col_pos = 6.
+  gs_field_cat-hotspot = 'X'.
+  gs_field_cat-coltext = '전기키'.
+  APPEND gs_field_cat TO gt_field_cat_b.
+
+  CLEAR gs_field_cat.
+  gs_field_cat-fieldname = 'KEY_TEXT'.
+  gs_field_cat-col_pos = 7.
+  gs_field_cat-coltext = '전기키 설명'.
+  APPEND gs_field_cat TO gt_field_cat_b.
+
+  CLEAR gs_field_cat.
+  gs_field_cat-fieldname = 'AUGBL'. " 반제 전표 번호
+  gs_field_cat-hotspot = 'X'.
+  APPEND gs_field_cat TO gt_field_cat_b.
+
+  CLEAR gs_field_cat.
+  gs_field_cat-fieldname = 'BPCODE'. " bp
+  gs_field_cat-hotspot = 'X'.
+  APPEND gs_field_cat TO gt_field_cat_b.
+
+<font color ="#0000FF">* 차변, 대변 추가</font>
+  CLEAR gs_field_cat.
+  gs_field_cat-fieldname = 'DEBIT'.
+  gs_field_cat-coltext    = '차변'.
+  gs_field_cat-cfieldname  = 'WAERS'.
+  APPEND gs_field_cat TO gt_field_cat_b.
+
+  CLEAR gs_field_cat.
+  gs_field_cat-fieldname = 'CREDIT'.
+  gs_field_cat-coltext    = '대변'.
+  gs_field_cat-cfieldname  = 'WAERS'.
+  APPEND gs_field_cat TO gt_field_cat_b.
+
+  " 반제일자는 보이지 않도록 (보일 필요가 없음)
+  CLEAR gs_field_cat.
+  gs_field_cat-fieldname = 'AUGDT'.
+  gs_field_cat-no_out = abap_on.
+  APPEND gs_field_cat TO gt_field_cat_b.
+
+  PERFORM remove_timestamp TABLES gt_field_cat_b.
+
+ENDFORM.
+<font color ="#0000FF">*&---------------------------------------------------------------------*</font>
+<font color ="#0000FF">*& Form set_handler_b</font>
+<font color ="#0000FF">*&---------------------------------------------------------------------*</font>
+FORM set_handler_b .
+
+  SET HANDLER lcl_event_event_handler=&gt;on_hotspot_click FOR go_alv_grid_b.
+
+ENDFORM.
+</pre>
+<hr>
+<font size="2" face = "Sans Serif">Extracted by Direct Download Enterprise version 1.3.1 - E.G.Mellodew. 1998-2005 UK. Sap Release 758
+</font>
+</body>
+</html>

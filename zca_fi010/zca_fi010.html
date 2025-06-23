@@ -1,0 +1,144 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 3.2//EN">
+<html>
+<head>
+<title>ZCA_FI010</title>
+</head>
+<body bgcolor="#FFFFE0">
+<font size="3" face = "Arial" color="#000000"><b>Code listing for: ZCA_FI010</b></font>
+<br>
+<font size="3" face = "Arial" color="#000000"><b>Description:  [FI] 결산 관리</b></font>
+<hr>
+<pre width="100">
+<font color ="#0000FF">*&---------------------------------------------------------------------*</font>
+<font color ="#0000FF">*& Report ZCA_FI010</font>
+<font color ="#0000FF">*&---------------------------------------------------------------------*</font>
+<font color ="#0000FF">*& [FI] 결산 관리</font>
+<font color ="#0000FF">*& 개발자 : 주현정</font>
+<font color ="#0000FF">*& 조회 Program</font>
+<font color ="#0000FF">*&---------------------------------------------------------------------*</font>
+REPORT zca_fi010 MESSAGE-ID zca_msg.
+
+<font color ="#0000FF">*--------------------------------------------------------------------*</font>
+<font color ="#0000FF">* 선언부</font>
+<font color ="#0000FF">*--------------------------------------------------------------------*</font>
+include <a href ="zca_fi010_top.html">zca_fi010_top</a>.   " 전역변수, 타입, 상수 등 선언
+include <a href ="zca_fi010_scr.html">zca_fi010_scr</a>.   " Selection Screen
+include <a href ="zca_fi010_cls.html">zca_fi010_cls</a>.   " Local Class 정의 구현
+
+<font color ="#0000FF">*--------------------------------------------------------------------*</font>
+<font color ="#0000FF">* 구현부</font>
+<font color ="#0000FF">*--------------------------------------------------------------------*</font>
+include <a href ="zca_fi010_pbo.html">zca_fi010_pbo</a>.
+include <a href ="zca_fi010_pai.html">zca_fi010_pai</a>.
+include <a href ="zca_fi010_f01.html">zca_fi010_f01</a>.
+
+<font color ="#0000FF">*--------------------------------------------------------------------*</font>
+<font color ="#0000FF">* ABAP Event</font>
+<font color ="#0000FF">*--------------------------------------------------------------------*</font>
+INITIALIZATION.
+
+AT SELECTION-SCREEN.
+
+  " 주차는 입력했는데 월이 비어있으면 오류
+  IF so_week[] IS NOT INITIAL AND so_month[] IS INITIAL.
+    MESSAGE e435. " 주차를 입력하려면 월도 입력해야 합니다.
+  ENDIF.
+
+  " 월 유효성 검사
+  LOOP AT so_month.
+    IF ( so_month-low &lt; 1 OR so_month-low &gt; 12 ) and ( so_month-high &lt; 1 or so_month-high &gt; 12 ).
+      MESSAGE E454. " 월은 1에서 12 사이여야 합니다.
+    ENDIF.
+  ENDLOOP.
+
+  " 주차 유효성 검사
+  LOOP AT so_week.
+    IF  ( so_week-low &lt; 1 OR so_week-low &gt; 5 ) and ( so_week-high &lt; 1 OR so_week-high &gt; 5 ).
+      MESSAGE E455. " 주차는 1에서 5 사이여야 합니다.
+    ENDIF.
+  ENDLOOP.
+
+START-OF-SELECTION.
+  PERFORM select_data.
+  PERFORM set_category_for_items.
+  PERFORM set_open_flag_for_items.
+  CALL SCREEN 0100.
+
+<font color ="#0000FF">*GUI Texts</font>
+<font color ="#0000FF">*----------------------------------------------------------</font>
+<font color ="#0000FF">* T0100 --&gt; [FI] 결산 관리</font>
+<font color ="#0000FF">* T0120 --&gt; 시산표 (Trial Balance)</font>
+<font color ="#0000FF">* T0130 --&gt; 계정 상세 : &</font>
+
+<font color ="#0000FF">*Text elements</font>
+<font color ="#0000FF">*----------------------------------------------------------</font>
+<font color ="#0000FF">* 001 결산 검색 조건</font>
+<font color ="#0000FF">* A01 자산</font>
+<font color ="#0000FF">* A02 부채</font>
+<font color ="#0000FF">* A03 자본</font>
+<font color ="#0000FF">* A04 수익</font>
+<font color ="#0000FF">* A05 비용</font>
+<font color ="#0000FF">* A06 기타</font>
+<font color ="#0000FF">* B01 회사코드</font>
+<font color ="#0000FF">* B02 회계연도</font>
+<font color ="#0000FF">* B03 월</font>
+<font color ="#0000FF">* B04 주차</font>
+<font color ="#0000FF">* F01 순서</font>
+<font color ="#0000FF">* F02 계정유형</font>
+<font color ="#0000FF">* F03 계정명</font>
+<font color ="#0000FF">* F04 차변 합계</font>
+<font color ="#0000FF">* F05 대변 합계</font>
+<font color ="#0000FF">* F06 차변 잔액</font>
+<font color ="#0000FF">* F07 대변 잔액</font>
+<font color ="#0000FF">* Q01 해당 주차를 결산하시겠습니까?</font>
+<font color ="#0000FF">* Q02 예</font>
+<font color ="#0000FF">* Q03 아니오</font>
+<font color ="#0000FF">* T01 주차 별 전표</font>
+<font color ="#0000FF">* T02 주차 별 결산</font>
+<font color ="#0000FF">* T03 차/대변 일치</font>
+<font color ="#0000FF">* T04 차/대변 불일치</font>
+<font color ="#0000FF">* T05 PDF 출력</font>
+<font color ="#0000FF">* T06 전기키 명</font>
+<font color ="#0000FF">* T07 차변 금액</font>
+<font color ="#0000FF">* T08 대변 금액</font>
+
+
+<font color ="#0000FF">*Selection texts</font>
+<font color ="#0000FF">*----------------------------------------------------------</font>
+<font color ="#0000FF">* SO_BUKRS D       .</font>
+<font color ="#0000FF">* SO_MONTH         월</font>
+<font color ="#0000FF">* SO_WEEK         주차</font>
+<font color ="#0000FF">* SO_YEAR         년도</font>
+
+
+<font color ="#0000FF">*Messages</font>
+<font color ="#0000FF">*----------------------------------------------------------</font>
+<font color ="#0000FF">*</font>
+<font color ="#0000FF">* Message class: ZCA_MSG</font>
+<font color ="#0000FF">*412   주차를 선택하세요.</font>
+<font color ="#0000FF">*413   주차 폴더를 선택하세요. (전표 아이템이 아닙니다)</font>
+<font color ="#0000FF">*415   이미 결산이 완료된 주차입니다.</font>
+<font color ="#0000FF">*416   결산이 취소되었습니다.</font>
+<font color ="#0000FF">*417   이벤트 등록 중 오류</font>
+<font color ="#0000FF">*418   SmartForm 생성 오류</font>
+<font color ="#0000FF">*419   SmartForm 출력 실패</font>
+<font color ="#0000FF">*420   PDF 변환 실패</font>
+<font color ="#0000FF">*422   XSTRING 변환 실패</font>
+<font color ="#0000FF">*423   PDF 저장 완료</font>
+<font color ="#0000FF">*424   PDF 저장 실패</font>
+<font color ="#0000FF">*425   결산 저장 중 오류 발생</font>
+<font color ="#0000FF">*426   &년 &월 &주차 결산 결과가 성공적으로 저장되었습니다.</font>
+<font color ="#0000FF">*428   일반 데이터행만 클릭해주세요.</font>
+<font color ="#0000FF">*429   선택한 데이터를 찾을 수 없습니다.</font>
+<font color ="#0000FF">*435   주차를 입력하려면 월도 입력해야 합니다.</font>
+<font color ="#0000FF">*441   주차가 아직 끝나지 않아, 결산이 불가능합니다</font>
+<font color ="#0000FF">*443   차/대변이 불일치 하여 결산이 불가능합니다.</font>
+<font color ="#0000FF">*454   월은 1에서 12 사이여야 합니다.</font>
+<font color ="#0000FF">*455   주차는 1에서 5 사이여야 합니다.</font>
+<font color ="#0000FF">*461   이전 주차가 결산되지 않았습니다. 이전 주차를 먼저 결산하세요.</font>
+</pre>
+<hr>
+<font size="2" face = "Sans Serif">Extracted by Direct Download Enterprise version 1.3.1 - E.G.Mellodew. 1998-2005 UK. Sap Release 758
+</font>
+</body>
+</html>

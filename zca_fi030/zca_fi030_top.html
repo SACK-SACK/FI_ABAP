@@ -1,0 +1,192 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 3.2//EN">
+<html>
+<head>
+<title>ZCA_FI030_TOP</title>
+</head>
+<body bgcolor="#FFFFE0">
+<font size="3" face = "Arial" color="#000000"><b>Code listing for: ZCA_FI030_TOP</b></font>
+<br>
+<font size="3" face = "Arial" color="#000000"><b>Description:  top</b></font>
+<hr>
+<pre width="100">
+<font color ="#0000FF">*&---------------------------------------------------------------------*</font>
+<font color ="#0000FF">*& Include          ZCA_FI030_TOP</font>
+<font color ="#0000FF">*&---------------------------------------------------------------------*</font>
+
+<font color ="#0000FF">* 사용할 테이블</font>
+TABLES : ZCA_FIT060,  " 임시 전표 헤더
+         ZCA_FIT070,  " 임시 전표 아이템
+         zca_tbsl.    " 전기키
+
+<font color ="#0000FF">**---------------------------------------------------------------------*</font>
+<font color ="#0000FF">** ALV 1 : 전표 Header [ZCA_FIT040]</font>
+<font color ="#0000FF">**---------------------------------------------------------------------*</font>
+" 전체 전표 헤더
+DATA gv_header_created TYPE abap_bool VALUE abap_false.
+
+TYPES : BEGIN OF ty_HEADER.
+        include structure <a href ="zca_fit060/dictionary-zca_fit060.html">zca_fit060</a>.
+TYPES : icon  TYPE icon-id,    " 아이콘 필드 추가
+        descr TYPE zca_descr,  " 전표유형명
+        END OF ty_header.
+
+DATA : gt_fit060 TYPE TABLE OF ty_header,
+       gs_fit060 TYPE ty_header.
+
+
+<font color ="#0000FF">* 승인 요청 전</font>
+DATA : gt_before TYPE TABLE OF ty_header,
+       gs_before TYPE ty_header.
+DATA : gt_selected TYPE TABLE OF ZCA_FIT060,
+      gs_selected TYPE ZCA_FIT060.
+
+<font color ="#0000FF">* 승인 요청 후</font>
+DATA : gt_after TYPE TABLE OF ty_header,
+       gs_after TYPE ty_header.
+
+<font color ="#0000FF">**---------------------------------------------------------------------*</font>
+<font color ="#0000FF">** ALV 2 : 전표 Item [ZCA_FIT050] : 전기키(뒷자리가 1이면 차변 / 2변 대변)</font>
+<font color ="#0000FF">**---------------------------------------------------------------------*</font>
+DATA: BEGIN OF gs_fit070.
+      include structure <a href ="zca_fit070/dictionary-zca_fit070.html">zca_fit070</a>.
+DATA :   debit  LIKE zca_fit050-dmbtr,
+         credit LIKE zca_fit050-dmbtr,
+      END OF gs_fit070.
+
+DATA : gt_fit070 LIKE TABLE OF gs_fit070,
+      gv_bpcode TYPE zca_bpcode.
+
+<font color ="#0000FF">*DATA: GT_FIT070 TYPE TABLE OF zca_fit070,</font>
+<font color ="#0000FF">*      GS_FIT070 LIKE LINE OF gt_fit070.</font>
+
+<font color ="#0000FF">**---------------------------------------------------------------------*</font>
+<font color ="#0000FF">** 전표 생성을 위한 변수 선언</font>
+<font color ="#0000FF">**---------------------------------------------------------------------*</font>
+DATA : gt_fit040 TYPE TABLE OF zca_fit040,  " 전표 헤더
+       gs_fit040 LIKE LINE OF gt_fit040,
+       gt_fit050 TYPE TABLE OF zca_fit050,  " 전표 아이템
+       gs_fit050 LIKE LINE OF gt_fit050.
+
+
+<font color ="#0000FF">**---------------------------------------------------------------------*</font>
+<font color ="#0000FF">** Screen 관련 선언</font>
+<font color ="#0000FF">**---------------------------------------------------------------------*</font>
+<font color ="#0000FF">* 화면 및 ALV 출력에 필요한 변수를 선언</font>
+DATA OK_CODE TYPE SY-UCOMM. " 뒤로가기, 나가기, 취소하기 등 사용자 액션에 대한 펑션코드값
+
+DATA : new_num    TYPE int4,  " 신규 상태
+       red_num    TYPE int4,  " 반려 상태
+       yellow_num TYPE int4,  " 상신 상태
+       green_num  TYPE int4.  " 승인 상태
+
+" Money -&gt; 차 / 대변 금액 + 총 합 금액
+DATA : s_money     LIKE zca_fit050-dmbtr,
+       h_money     LIKE zca_fit050-dmbtr,
+       total_money LIKE zca_fit050-dmbtr.
+
+" Status Icon 을 위한 flag (기본값 0)
+DATA icon_flag TYPE i VALUE 0.
+DATA: st_icon     TYPE icons-text,
+      status_icon TYPE char30,
+      status_text TYPE char30.
+
+DATA : BEGIN OF SCREEN0100,
+       RAWPRICE TYPE zca_dmbtr,
+       TAXPRICE TYPE zca_dmbtr,
+       totalprice TYPE zca_dmbtr,
+       rawcur   TYPE zca_waers,
+       taxcur   TYPE zca_waers,
+       totalcur   TYPE zca_waers,
+      END OF SCREEN0100.
+<font color ="#0000FF">*---------------------------------------------------------------------*</font>
+<font color ="#0000FF">* ALV관련 선언</font>
+<font color ="#0000FF">*---------------------------------------------------------------------*</font>
+
+<font color ="#0000FF">* 각 ALV 전용 layout</font>
+DATA: gs_layout_0100 TYPE lvc_s_layo, " 1번째
+      gs_layout_0110 TYPE lvc_s_layo, " 2번째
+      gs_layout_0120 TYPE lvc_s_layo, " 3번째
+      gs_layout_0130 TYPE lvc_s_layo, " 4번째
+      gs_layout_t TYPE lvc_s_layo. " Tab
+
+<font color ="#0000FF">* 각 ALV 전용 variant</font>
+DATA: gs_variant_0100 TYPE disvariant, " 1번째
+      gs_variant_0110 TYPE disvariant, " 2번째
+      gs_variant_0120 TYPE disvariant, " 3번째
+      gs_variant_0130 TYPE disvariant, " 4번째
+      gs_variant_t TYPE disvariant. " Tab
+
+<font color ="#0000FF">* Save mode도 각각</font>
+DATA: gv_save_0100 ,  " 1번째
+      gv_save_0110 ,  " 2번째
+      gv_save_0120 ,  " 3번째
+      gv_save_0130 ,  " 3번째
+      gv_save_t.  " Tab
+
+<font color ="#0000FF">* ALV에 출력할 필드 정보를 구성하고 ALV에게 전달한다.</font>
+DATA: GT_FIELD_CAT_0100 TYPE LVC_T_FCAT,
+      GS_FIELD_CAT TYPE lvc_s_fcat,
+
+      GT_FIELD_CAT_0110 TYPE LVC_T_FCAT,
+      GT_FIELD_CAT_0120 TYPE LVC_T_FCAT,
+      GT_FIELD_CAT_0130 TYPE LVC_T_FCAT.
+
+DATA :  go_container_0100       TYPE REF TO cl_gui_custom_container,
+        go_alv_grid_0100        TYPE REF TO cl_gui_alv_grid,
+
+        go_container_0110       TYPE REF TO cl_gui_custom_container,
+        go_alv_grid_0110        TYPE REF TO cl_gui_alv_grid,
+
+        go_container_0120       TYPE REF TO cl_gui_custom_container,
+        go_alv_grid_0120        TYPE REF TO cl_gui_alv_grid,
+
+        go_container_0130       TYPE REF TO cl_gui_custom_container,
+        go_alv_grid_0130        TYPE REF TO cl_gui_alv_grid.
+
+
+<font color ="#0000FF">**---------------------------------------------------------------------*</font>
+<font color ="#0000FF">** Tabstrip 관련 변수</font>
+<font color ="#0000FF">**---------------------------------------------------------------------*</font>
+<font color ="#0000FF">* Subscreen 의 번호를 담당할 변수</font>
+DATA dynnr TYPE sy-dynnr. " 화면번호는 문자 4자리
+DATA dynnr_pop TYPE sy-dynnr. " 화면번호는 문자 4자리
+
+<font color ="#0000FF">* Tabstrip을 제어하기 위한 변수</font>
+CONTROLS my_tabstrip TYPE TABSTRIP.
+CONTROLS pop_tabstrip TYPE TABSTRIP.
+
+<font color ="#0000FF">**---------------------------------------------------------------------*</font>
+<font color ="#0000FF">** 헤더, 아이템 생성 관련 itad, WA</font>
+<font color ="#0000FF">**---------------------------------------------------------------------*</font>
+" itab + work area
+DATA gt_header TYPE TABLE OF zca_fit060.
+DATA gs_header TYPE zca_fit060.
+
+DATA gt_item TYPE TABLE OF zca_fit070.
+DATA gs_item TYPE zca_fit070.
+
+TYPES : BEGIN OF ty_popup.
+          include structure <a href ="zca_fit070/dictionary-zca_fit070.html">zca_fit070</a>.
+TYPES :   debit  TYPE zca_dmbtr,
+          credit TYPE zca_dmbtr,
+          bstxt  TYPE zca_bstxt,               " 전기키명
+        END OF ty_popup.
+
+DATA : gs_popup_data TYPE ty_popup,
+       gt_popup_data TYPE TABLE OF ty_popup.
+
+DATA : BEGIN OF SCREEN0150,
+             PARTNR TYPE zca_bpcode,
+             BPNAME TYPE zca_bpname,
+             BPCSNR TYPE zca_bpcsnr,
+             BPHEAD TYPE zca_bphaed,
+             bpadrr TYPE zca_bpadrr,
+             ZLSCH  TYPE zca_zlsch,
+             zemail TYPE zca_zemail,
+        END OF SCREEN0150.
+</pre>
+<hr>
+<font size="2" face = "Sans Serif">Extracted by Direct Download Enterprise version 1.3.1 - E.G.Mellodew. 1998-2005 UK. Sap Release 758
+</font>
+</body>
+</html>

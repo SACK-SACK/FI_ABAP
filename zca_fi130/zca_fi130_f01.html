@@ -1,0 +1,385 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 3.2//EN">
+<html>
+<head>
+<title>ZCA_FI130_F01</title>
+</head>
+<body bgcolor="#FFFFE0">
+<font size="3" face = "Arial" color="#000000"><b>Code listing for: ZCA_FI130_F01</b></font>
+<br>
+<font size="3" face = "Arial" color="#000000"><b>Description:  Include ZCA_FI130_F01</b></font>
+<hr>
+<pre width="100">
+<font color ="#0000FF">*&---------------------------------------------------------------------*</font>
+<font color ="#0000FF">*& Include          ZCA_FI130_F01</font>
+<font color ="#0000FF">*&---------------------------------------------------------------------*</font>
+<font color ="#0000FF">*&---------------------------------------------------------------------*</font>
+<font color ="#0000FF">*& Form display_data</font>
+<font color ="#0000FF">*&---------------------------------------------------------------------*</font>
+FORM display_data .
+
+  CALL SCREEN 0100.
+
+
+ENDFORM.
+<font color ="#0000FF">*&---------------------------------------------------------------------*</font>
+<font color ="#0000FF">*& Form select_data</font>
+<font color ="#0000FF">*&---------------------------------------------------------------------*</font>
+FORM select_data .
+
+  " 송장 헤더
+  SELECT SINGLE * FROM zca_rbkp INTO CORRESPONDING FIELDS OF gs_rbkp
+           WHERE invnr = pa_invnr AND gjahr = pa_gjahr.
+
+
+ENDFORM.
+<font color ="#0000FF">*&---------------------------------------------------------------------*</font>
+<font color ="#0000FF">*& Form create_object_0100</font>
+<font color ="#0000FF">*&---------------------------------------------------------------------*</font>
+FORM create_object_0100 .
+
+  CREATE OBJECT go_container
+    EXPORTING
+      container_name = 'CCON'.   " 화면에 내가 만든 CCON Area의 이름
+
+  CREATE OBJECT go_alv_grid
+    EXPORTING
+      i_parent = go_container.   " Parent Container
+
+ENDFORM.
+
+<font color ="#0000FF">*&---------------------------------------------------------------------*</font>
+<font color ="#0000FF">*& Form set_alv_layout_0100</font>
+<font color ="#0000FF">*&---------------------------------------------------------------------*</font>
+FORM set_alv_layout_0100 .
+
+  CLEAR gs_layout.
+  CLEAR gs_variant.
+
+  " 선택모드는 셀 단위로 지정
+  gs_layout-sel_mode = 'A'.
+  " 얼룩 처리
+  gs_layout-zebra = abap_on.
+
+<font color ="#0000FF">*--------------------------------------------------------------------*</font>
+<font color ="#0000FF">* Variant</font>
+<font color ="#0000FF">*--------------------------------------------------------------------*</font>
+  " 저장 가능하도록 설정
+  " 저장 모드 -&gt; 모두 가능
+  gs_variant-report    = sy-cprog.
+  gv_save              = 'A'.
+
+ENDFORM.
+
+<font color ="#0000FF">*&---------------------------------------------------------------------*</font>
+<font color ="#0000FF">*& Form set_alv_fieldcat_0100</font>
+<font color ="#0000FF">*&---------------------------------------------------------------------*</font>
+FORM set_alv_fieldcat_0100 .
+
+  REFRESH gt_field_cat.
+
+
+ENDFORM.
+
+<font color ="#0000FF">*&---------------------------------------------------------------------*</font>
+<font color ="#0000FF">*& Form set_alv_event_0100</font>
+<font color ="#0000FF">*&---------------------------------------------------------------------*</font>
+FORM set_alv_event_0100 .
+
+ENDFORM.
+
+<font color ="#0000FF">*&---------------------------------------------------------------------*</font>
+<font color ="#0000FF">*& Form set_alv_table_for_display_0100</font>
+<font color ="#0000FF">*&---------------------------------------------------------------------*</font>
+FORM set_alv_table_for_display_0100 .
+
+  CALL METHOD go_alv_grid-&gt;set_table_for_first_display
+    EXPORTING
+      i_structure_name = 'ZCA_FIT070'    " Internal Output Table Structure Name
+      is_variant       = gs_variant       " Layout
+      i_save           = gv_save          " Save Layout
+      is_layout        = gs_layout        " Layout
+    CHANGING
+      it_outtab        = gt_fit070.       " Output Table
+
+ENDFORM.
+<font color ="#0000FF">*&---------------------------------------------------------------------*</font>
+<font color ="#0000FF">*& Form change_status</font>
+<font color ="#0000FF">*&---------------------------------------------------------------------*</font>
+FORM change_status .
+
+  CASE icon_flag.
+    WHEN 0. " 승인 요청 전
+      status_icon = icon_led_red.
+      status_text = '승인 요청 전'(s01).
+    WHEN 1. " 승인 대기
+      status_icon = icon_led_yellow.
+      status_text = '승인 대기'(s02).
+    WHEN 2. " 승인 완료
+      status_icon = icon_led_green.
+      status_text = '승인 완료'(s03).
+  ENDCASE.
+
+ENDFORM.
+<font color ="#0000FF">*&---------------------------------------------------------------------*</font>
+<font color ="#0000FF">*& Form create_temp_docu</font>
+<font color ="#0000FF">*&---------------------------------------------------------------------*</font>
+FORM create_temp_docu .
+
+<font color ="#0000FF">*--------------------------------------------------------------------*</font>
+<font color ="#0000FF">* 임시 전표 발행 : 원재료 + 부가세 대급금 | 외상매입금</font>
+<font color ="#0000FF">*--------------------------------------------------------------------*</font>
+  " 1. 헤더 생성 + 아이템 (원재료) 발행 -&gt; 차변 1
+  call function <a href ="zca_fi_post_temp_docu/zca_fi_post_temp_docu.html">'ZCA_FI_POST_TEMP_DOCU'</a>
+    EXPORTING
+      iv_bukrs  = '1001'                       " 회사코드
+      iv_gjahr  = gs_rbkp-gjahr                " 회계연도
+      iv_blart  = 'KA'                         " 전표유형 -&gt; 공급업체 전표
+      iv_bldat  = gs_rbkp-bldat                " 증빙일자
+      iv_budat  = gs_rbkp-budat                " 전기일자
+      iv_bltxt  = '벤더 매입 전표'             " 전표 헤더 텍스트
+      iv_xblnr  = gs_rbkp-invnr                " 참조문서
+      iv_bschl  = 41                           " 전기키 -&gt; 자재 입고(차변)
+      iv_saknr  = '1200030000'                 " G/L 계정
+      iv_dmbtr  = gs_rbkp-rmwwr                " 금액(KRW)
+      iv_waers  = gs_rbkp-waers                " 통화코드
+      iv_bpcode = gs_rbkp-ltfnr                " BP 코드
+    IMPORTING
+      ev_bukrs  = gs_fit060-bukrs              " 회사코드
+      ev_belnr  = gs_fit060-belnr              " 전표번호
+      ev_gjahr  = gs_fit060-gjahr.             " 회계연도
+  " 생성된 임시 전표 헤더의 key field 정보를 gs_fit060 에 저장
+
+  " 2. 아이템 (부가세 대급금) 발행 -&gt; 차변 2 (위에서 받아온 전표 번호를 기반으로)
+  call function <a href ="zca_fi_post_temp_docu/zca_fi_post_temp_docu.html">'ZCA_FI_POST_TEMP_DOCU'</a>
+    EXPORTING
+      iv_bukrs  = '1001'                       " 회사코드
+      iv_gjahr  = gs_rbkp-gjahr                " 회계연도
+      iv_belnr  = gs_fit060-belnr              " 전표번호(헤더 생성 때는 적지 않는다)
+      iv_bschl  = 31                           " 전기키 -&gt; 일반계정 차변
+      iv_saknr  = '1101000000'                 " G/L 계정
+      iv_dmbtr  = gs_rbkp-taxamount            " 금액(KRW)
+      iv_waers  = gs_rbkp-waers                " 통화코드
+      iv_bpcode = gs_rbkp-ltfnr.               " BP 코드
+
+  " 3. 아이템 (외상매입금) 발행 -&gt; 대변(위에서 받아온 전표 번호로)
+  call function <a href ="zca_fi_post_temp_docu/zca_fi_post_temp_docu.html">'ZCA_FI_POST_TEMP_DOCU'</a>
+    EXPORTING
+      iv_bukrs  = '1001'                       " 회사코드
+      iv_gjahr  = gs_rbkp-gjahr                " 회계연도
+      iv_belnr  = gs_fit060-belnr              " 전표번호(헤더 생성 때는 적지 않는다)
+      iv_bschl  = 22                           " 전기키 -&gt; 공급업체 대변 전기
+      iv_saknr  = '2100010000'                 " G/L 계정
+      iv_dmbtr  = gs_rbkp-finalamt             " 금액(KRW)
+      iv_waers  = gs_rbkp-waers                " 통화코드
+      iv_bpcode = gs_rbkp-ltfnr.               " BP 코드
+
+ENDFORM.
+<font color ="#0000FF">*&---------------------------------------------------------------------*</font>
+<font color ="#0000FF">*& Form make_display_data</font>
+<font color ="#0000FF">*&---------------------------------------------------------------------*</font>
+FORM make_display_data .
+
+  " 나중엔 실제 전표에서 데이터를 가져와야한다.
+  " 지금은 전기되는게 여기서 구현되지 않기 때문에 임시 전표 아이템을 가지고 온다 !!
+  SELECT * FROM zca_fit070
+    INTO CORRESPONDING FIELDS OF TABLE gt_fit070
+    WHERE bukrs = gs_fit060-bukrs
+      AND belnr = gs_fit060-belnr
+      AND gjahr = gs_fit060-gjahr.
+
+  go_alv_grid-&gt;refresh_table_display( ).
+
+ENDFORM.
+<font color ="#0000FF">*&---------------------------------------------------------------------*</font>
+<font color ="#0000FF">*& Form make_payment_docu</font>
+<font color ="#0000FF">*&---------------------------------------------------------------------*</font>
+FORM make_payment_docu .
+
+<font color ="#0000FF">*  " 임시로 전기되었다고 가정하고 실제 93번 전표에서 가지고 오는 것</font>
+<font color ="#0000FF">*  SELECT SINGLE * FROM zca_fit040</font>
+<font color ="#0000FF">*    INTO CORRESPONDING FIELDS OF gs_fit040</font>
+<font color ="#0000FF">*    WHERE bukrs EQ '1001'</font>
+<font color ="#0000FF">*      AND belnr EQ '0000000093'</font>
+<font color ="#0000FF">*      AND gjahr EQ '2025'.</font>
+<font color ="#0000FF">*</font>
+<font color ="#0000FF">*</font>
+<font color ="#0000FF">*  " 실제 전표에 지급 미결 전표를 생성</font>
+<font color ="#0000FF">*  " 외상매입금 | 보통예금</font>
+<font color ="#0000FF">*  DATA: ls_fit040 TYPE zca_fit040,</font>
+<font color ="#0000FF">*        ls_fit050 TYPE zca_fit050.</font>
+<font color ="#0000FF">*</font>
+<font color ="#0000FF">*  " 헤더 생성 + 아이템 생성</font>
+<font color ="#0000FF">*  " 차변 외상매입금</font>
+<font color ="#0000FF">*  CALL FUNCTION 'ZCA_FI_POST_DOCU'</font>
+<font color ="#0000FF">*    EXPORTING</font>
+<font color ="#0000FF">*      iv_bukrs  = '1001'              " 회사코드</font>
+<font color ="#0000FF">*      iv_gjahr  = gs_fit040-gjahr     " 회계연도</font>
+<font color ="#0000FF">*      iv_blart  = 'KZ'                " 공급업체 지급 !!</font>
+<font color ="#0000FF">*      iv_bldat  = sy-datum            " 증빙일자(이미 있는 헤더를 사용할 땐 X)</font>
+<font color ="#0000FF">*      iv_budat  = sy-datum            " 전기일자(이미 있는 헤더를 사용할 땐 X)</font>
+<font color ="#0000FF">*      iv_bltxt  = '공급업체 지급 전표'  " 전표 헤더 텍스트(이미 있는 헤더를 사용할 땐 X)</font>
+<font color ="#0000FF">*      iv_xblnr  = gs_fit040-belnr       " 참조문서를 관련 정보로 지정</font>
+<font color ="#0000FF">*      iv_bschl  = 21                    " 전기키</font>
+<font color ="#0000FF">*      iv_saknr  = '2100010000'          " G/L 계정</font>
+<font color ="#0000FF">*      iv_dmbtr  = gs_rbkp-finalamt       " 금액(KRW)</font>
+<font color ="#0000FF">*      iv_waers  = gs_rbkp-waers       " 통화코드</font>
+<font color ="#0000FF">*      iv_bpcode = gs_rbkp-ltfnr       " BP 코드</font>
+<font color ="#0000FF">*    IMPORTING</font>
+<font color ="#0000FF">*      ev_bukrs  = ls_fit040-bukrs                 " 회사코드</font>
+<font color ="#0000FF">*      ev_belnr  = ls_fit040-belnr                 " 전표번호</font>
+<font color ="#0000FF">*      ev_gjahr  = ls_fit040-gjahr</font>
+<font color ="#0000FF">*      ev_itnum  = ls_fit050-itnum.                " 회계연도</font>
+<font color ="#0000FF">*</font>
+<font color ="#0000FF">*  " 대변 보통 예금</font>
+<font color ="#0000FF">*  CALL FUNCTION 'ZCA_FI_POST_DOCU'</font>
+<font color ="#0000FF">*    EXPORTING</font>
+<font color ="#0000FF">**     iv_bukrs = '1001'           " 회사코드</font>
+<font color ="#0000FF">*      iv_gjahr = ls_fit040-gjahr                 " 회계연도</font>
+<font color ="#0000FF">*      iv_belnr = ls_fit040-belnr                 " 전표번호(헤더 생성 때는 적지 않는다)</font>
+<font color ="#0000FF">*      iv_bschl = 32                 " 전기키</font>
+<font color ="#0000FF">*      iv_saknr = '1100030000'                 " G/L 계정</font>
+<font color ="#0000FF">*      iv_dmbtr = gs_rbkp-finalamt              " 금액(KRW)</font>
+<font color ="#0000FF">*      iv_waers = gs_rbkp-waers.               " 통화코드</font>
+<font color ="#0000FF">*</font>
+<font color ="#0000FF">*  gv_bukrs = ls_fit040-bukrs.</font>
+<font color ="#0000FF">*  gv_gjahr = ls_fit040-gjahr.</font>
+<font color ="#0000FF">*  gr_belnr = VALUE #( ( sign = 'I' option = 'EQ' low = ls_fit040-belnr ) ).</font>
+<font color ="#0000FF">*</font>
+<font color ="#0000FF">*  " 보조 원장에 넘기기</font>
+<font color ="#0000FF">*  CALL FUNCTION 'ZCA_FI_POST_RECON_VEN'</font>
+<font color ="#0000FF">*    EXPORTING</font>
+<font color ="#0000FF">*      i_bukrs = ls_fit040-bukrs                   " 회사코드</font>
+<font color ="#0000FF">*      i_belnr = ls_fit040-belnr                   " 전표번호</font>
+<font color ="#0000FF">*      i_gjahr = ls_fit040-gjahr                   " 회계연도</font>
+<font color ="#0000FF">*      i_itnum = ls_fit050-itnum.                  " 아이템번호</font>
+
+ENDFORM.
+<font color ="#0000FF">*&---------------------------------------------------------------------*</font>
+<font color ="#0000FF">*& Form request_accept</font>
+<font color ="#0000FF">*&---------------------------------------------------------------------*</font>
+FORM request_accept .
+  DATA: lv_answer TYPE c.
+  CALL FUNCTION 'POPUP_TO_CONFIRM_STEP'
+    EXPORTING
+      defaultoption  = 'Y'
+      textline1      = '송장 승인을 요청하시겠습니까? '(q01)
+      titel          = '승인 요청 확인'(t02)
+      cancel_display = ' '
+    IMPORTING
+      answer         = lv_answer.
+
+  IF lv_answer = 'J'.
+
+    IF p_mode = 'D'.
+<font color ="#0000FF">*      PERFORM make_doc.</font>
+
+    ELSE.
+      MESSAGE i433. " 임시 전표 요청 화면으로 이동(지금은 요청 대기로 처리)
+      SUBMIT zca_fi030
+        WITH so_belnr EQ gs_fit060-belnr
+      AND RETURN .
+    ENDIF.
+
+    icon_flag = 1. " 승인 요청 = 승인 대기
+    PERFORM change_status.          " 승인 대기로
+    COMMIT WORK.
+  ELSEIF lv_answer = 'N'.
+    MESSAGE s434. " 취소되었습니다
+  ENDIF.
+
+ENDFORM.
+<font color ="#0000FF">*&---------------------------------------------------------------------*</font>
+<font color ="#0000FF">*& Form make_doc</font>
+<font color ="#0000FF">*&---------------------------------------------------------------------*</font>
+FORM make_doc .
+
+  " 1. 전표 헤더 데이터 가져오기 (임시 전표 기준)
+  DATA gs_before TYPE zca_fit060.
+  SELECT SINGLE * INTO gs_before
+    FROM zca_fit060
+    WHERE bukrs = gs_fit060-bukrs
+      AND belnr = gs_fit060-belnr
+      AND gjahr = gs_fit060-gjahr.
+
+  IF sy-subrc NE 0.
+    MESSAGE '임시 전표를 찾을 수 없습니다.' TYPE 'E'.
+    RETURN.
+  ENDIF.
+
+  " 2. 상태 자동 변경
+  gs_before-appstatus = 'A'.
+
+  UPDATE zca_fit060
+  SET appstatus = 'A',
+      opinion   = '정상 승인',
+      approver  = @sy-uname,
+      appdate   = @sy-datum,
+      recipient = @sy-uname,
+      recdate   = @sy-datum
+  WHERE bukrs = @gs_before-bukrs
+    AND belnr = @gs_before-belnr
+    AND gjahr = @gs_before-gjahr.
+
+  " 3. 아이템 전기
+  SELECT * FROM zca_fit070
+    INTO TABLE gt_fit070
+    WHERE bukrs = gs_before-bukrs
+      AND belnr = gs_before-belnr
+      AND gjahr = gs_before-gjahr.
+
+  LOOP AT gt_fit070 INTO gs_fit070.
+
+    IF sy-tabix = 1.
+      call function <a href ="zca_fi_post_docu/zca_fi_post_docu.html">'ZCA_FI_POST_DOCU'</a>
+        EXPORTING
+          iv_bukrs  = gs_before-bukrs
+          iv_belnr  = gs_before-belnr
+          iv_gjahr  = gs_before-gjahr
+          iv_blart  = gs_before-blart
+          iv_bldat  = gs_before-bldat
+          iv_budat  = gs_before-budat
+          iv_bltxt  = gs_before-bltxt
+          iv_xblnr  = gs_before-xblnr
+          iv_bschl  = gs_fit070-bschl
+          iv_saknr  = gs_fit070-saknr
+          iv_dmbtr  = gs_fit070-dmbtr
+          iv_waers  = gs_fit070-waers
+          iv_bpcode = gs_fit070-bpcode
+          iv_augdt  = ' '
+        IMPORTING
+          ev_bukrs  = gs_fit040-bukrs
+          ev_belnr  = gs_fit040-belnr
+          ev_gjahr  = gs_fit040-gjahr.
+
+    ELSE.
+      call function <a href ="zca_fi_post_docu/zca_fi_post_docu.html">'ZCA_FI_POST_DOCU'</a>
+        EXPORTING
+          iv_bukrs  = gs_before-bukrs
+          iv_gjahr  = gs_before-gjahr
+          iv_belnr  = gs_fit040-belnr
+          iv_bschl  = gs_fit070-bschl
+          iv_saknr  = gs_fit070-saknr
+          iv_dmbtr  = gs_fit070-dmbtr
+          iv_waers  = gs_fit070-waers
+          iv_bpcode = gs_fit070-bpcode.
+    ENDIF.
+
+  ENDLOOP.
+
+  " 4. 보조 원장 생성 (마지막 고정)
+  call function <a href ="zca_fi_post_recon_ven/zca_fi_post_recon_ven.html">'ZCA_FI_POST_RECON_VEN'</a>
+    EXPORTING
+      i_bukrs = gs_fit040-bukrs
+      i_belnr = gs_fit040-belnr
+      i_gjahr = gs_fit040-gjahr
+      i_itnum = 3.
+
+  MESSAGE '전표 전기 완료' TYPE 'S'.
+
+ENDFORM.
+</pre>
+<hr>
+<font size="2" face = "Sans Serif">Extracted by Direct Download Enterprise version 1.3.1 - E.G.Mellodew. 1998-2005 UK. Sap Release 758
+</font>
+</body>
+</html>

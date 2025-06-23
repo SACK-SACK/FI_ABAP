@@ -1,0 +1,80 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 3.2//EN">
+<html>
+<head>
+<title>ZCA_FI100_CLS</title>
+</head>
+<body bgcolor="#FFFFE0">
+<font size="3" face = "Arial" color="#000000"><b>Code listing for: ZCA_FI100_CLS</b></font>
+<br>
+<font size="3" face = "Arial" color="#000000"><b>Description:  CLS</b></font>
+<hr>
+<pre width="100">
+<font color ="#0000FF">*&---------------------------------------------------------------------*</font>
+<font color ="#0000FF">*& Include          ZCA_FI100_CLS</font>
+<font color ="#0000FF">*&---------------------------------------------------------------------*</font>
+CLASS lcl_event_handler DEFINITION .
+
+  PUBLIC SECTION .
+<font color ="#0000FF">*-- Static Method</font>
+    CLASS-METHODS :
+
+      " ALV에서 발생한 핫스팟 이벤트를 위한 메소드
+      on_hotspot_click
+        FOR EVENT hotspot_click OF cl_gui_alv_grid
+        IMPORTING e_row_id
+                  e_column_id.
+
+
+ENDCLASS.
+<font color ="#0000FF">*&---------------------------------------------------------------------*</font>
+<font color ="#0000FF">*& Class (Implementation) lcl_event_handler</font>
+<font color ="#0000FF">*&---------------------------------------------------------------------*</font>
+CLASS lcl_event_handler IMPLEMENTATION.
+
+  METHOD on_hotspot_click.
+
+    IF e_row_id-rowtype IS NOT INITIAL.
+      MESSAGE s428 DISPLAY LIKE 'W'. " 일반 데이터행만 클릭해주세요.
+      RETURN.
+    ENDIF.
+
+    CLEAR gs_result.
+    READ TABLE gt_result INTO gs_result INDEX e_row_id-index.
+
+    IF sy-subrc NE 0.
+      MESSAGE i429  DISPLAY LIKE 'W'. " 선택한 데이터를 찾을 수 없습니다.
+      RETURN .
+    ENDIF.
+
+    CASE e_column_id-fieldname.
+      WHEN 'BPCODE'.
+        call function <a href ="zca_fi_bp_popup_small/zca_fi_bp_popup_small.html">'ZCA_FI_BP_POPUP_SMALL'</a>
+          EXPORTING
+            iv_bpcode = gs_result-bpcode.                 " BP 코드
+      WHEN 'AUGBL'.
+        call function <a href ="zca_fi_docu_detail/zca_fi_docu_detail.html">'ZCA_FI_DOCU_DETAIL'</a>
+          EXPORTING
+<font color ="#0000FF">*           iv_bukrs = '1001'           " 회사코드</font>
+            iv_gjahr = gs_result-gjahr                 " 회계연도
+            iv_belnr = gs_result-augbl.                 " 전표번호
+
+      WHEN 'BELNR'. " 전표 번호
+        call function <a href ="zca_fi_docu_detail/zca_fi_docu_detail.html">'ZCA_FI_DOCU_DETAIL'</a>
+          EXPORTING
+<font color ="#0000FF">*           iv_bukrs = '1001'           " 회사코드</font>
+            iv_gjahr = gs_result-gjahr                 " 회계연도
+            iv_belnr = gs_result-belnr.                 " 전표번호
+
+      WHEN 'BSCHL'. " 전기키
+        call function <a href ="zca_fi_tbsl/zca_fi_tbsl.html">'ZCA_FI_TBSL'</a>
+          EXPORTING
+            iv_bschl = gs_result-bschl.                 " 전기키
+    ENDCASE.
+  ENDMETHOD.
+ENDCLASS.
+</pre>
+<hr>
+<font size="2" face = "Sans Serif">Extracted by Direct Download Enterprise version 1.3.1 - E.G.Mellodew. 1998-2005 UK. Sap Release 758
+</font>
+</body>
+</html>

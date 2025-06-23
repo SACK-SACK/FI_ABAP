@@ -1,0 +1,25 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 3.2//EN">
+<html>
+<head>
+<title>ZCA_FI080_SCR</title>
+</head>
+<body bgcolor="#FFFFE0">
+<font size="3" face = "Arial" color="#000000"><b>Code listing for: ZCA_FI080_SCR</b></font>
+<br>
+<font size="3" face = "Arial" color="#000000"><b>Description:  Include ZCA_FI080_SCR</b></font>
+<hr>
+<pre width="100">
+<font color ="#0000FF">*&---------------------------------------------------------------------*</font>
+<font color ="#0000FF">*& Include          ZCA_FI080_SCR</font>
+<font color ="#0000FF">*&---------------------------------------------------------------------*</font>
+SELECTION-SCREEN BEGIN OF BLOCK b1 WITH FRAME TITLE TEXT-001. " 검색 조건
+  SELECT-OPTIONS: so_year  FOR gs_fit110-pyear OBLIGATORY NO INTERVALS NO-EXTENSION,
+                  so_month FOR gs_fit110-pmonth NO INTERVALS NO-EXTENSION,
+                  so_week  FOR gs_fit110-pweek NO INTERVALS NO-EXTENSION.
+SELECTION-SCREEN END OF BLOCK b1.
+</pre>
+<hr>
+<font size="2" face = "Sans Serif">Extracted by Direct Download Enterprise version 1.3.1 - E.G.Mellodew. 1998-2005 UK. Sap Release 758
+</font>
+</body>
+</html>

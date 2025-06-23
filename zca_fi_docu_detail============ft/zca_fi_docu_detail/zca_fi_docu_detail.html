@@ -1,0 +1,103 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 3.2//EN">
+<html>
+<head>
+<title>ZCA_FI_DOCU_DETAIL</title>
+</head>
+<body bgcolor="#FFFFE0">
+<font size="3" face = "Arial" color="#000000"><b>Code listing for function: ZCA_FI_DOCU_DETAIL</b></font>
+<br>
+<font size="3" face = "Arial" color="#000000"><b>Description:  전표 헤더별 아이템 보기</b></font>
+<hr>
+<pre width="100">
+FUNCTION zca_fi_docu_detail.
+<font color ="#0000FF">*"----------------------------------------------------------------------</font>
+<font color ="#0000FF">*"*"Local Interface:</font>
+<font color ="#0000FF">*"  IMPORTING</font>
+<font color ="#0000FF">*"     REFERENCE(IV_BUKRS) TYPE  ZCA_BUKRS DEFAULT '1001'</font>
+<font color ="#0000FF">*"     REFERENCE(IV_GJAHR) TYPE  ZCA_GJAHR</font>
+<font color ="#0000FF">*"     REFERENCE(IV_BELNR) TYPE  ZCA_BELNR</font>
+<font color ="#0000FF">*"----------------------------------------------------------------------</font>
+
+<font color ="#0000FF">*       <a href ="global-zca_fi_docu_detail.html">Global data declarations</a></font>
+
+  REFRESH gt_display_0110.
+  CLEAR : zca_fit040, gs_display_0110.
+
+  DATA : lt_item TYPE TABLE OF zca_fit050,
+         ls_item TYPE zca_fit050.
+
+  " 해당하는 헤더 가져오기
+  CLEAR zca_fit040.
+  SELECT SINGLE * FROM zca_fit040 INTO zca_fit040
+   WHERE  belnr = iv_belnr
+      AND bukrs = iv_bukrs
+      AND gjahr = iv_gjahr.
+
+  " 전표 유형명 가져오기
+  DATA lv_descr TYPE zca_descr.
+  SELECT SINGLE descr FROM zca_fit030
+    INTO lv_descr WHERE blart EQ zca_fit040-blart.
+
+  screen_0110-descr = lv_descr.
+
+  DATA lv_flag.
+  IF sy-subrc EQ 0.
+
+    SELECT * FROM zca_fit050
+       INTO TABLE lt_item
+       WHERE belnr = zca_fit040-belnr
+         AND bukrs = zca_fit040-bukrs
+         AND gjahr = zca_fit040-gjahr.
+
+    LOOP AT lt_item INTO ls_item.
+      CLEAR gs_display_0110.
+      MOVE-CORRESPONDING ls_item TO gs_display_0110.
+
+      " 전기키로 차변 대변 구별
+      DATA lv_indi TYPE zca_tbsl-indi_cd.
+      SELECT SINGLE indi_cd FROM zca_tbsl
+        INTO lv_indi WHERE bschl = ls_item-bschl.
+
+      IF lv_indi EQ 'S'. " 차변
+        gs_display_0110-debit = ls_item-dmbtr.
+      ELSE.
+        gs_display_0110-credit = ls_item-dmbtr.
+      ENDIF.
+      APPEND gs_display_0110 TO gt_display_0110.
+
+      " lv_flag 가 비어있으면 반제 유지
+      " 반제 플래그 상태에서 &gt; 반제 체크가 비어있는게 나타나면 &gt; 미결 상태가 됨
+      IF lv_flag IS INITIAL AND gs_display_0110-augdt EQ ''.
+        lv_flag = 'X'.
+      ENDIF.
+    ENDLOOP.
+    IF lv_flag EQ 'X'.
+      screen_0110-status_icon = icon_led_red.
+      screen_0110-status_text = '미결 존재'.
+    ELSE.
+      screen_0110-status_icon = icon_led_green.
+      screen_0110-status_text = '반제 완료'.
+    ENDIF.
+
+  ENDIF.
+
+  CALL SCREEN 0110 STARTING AT 5 5.
+
+
+
+ENDFUNCTION.
+
+
+<font color ="#0000FF">*Messages</font>
+<font color ="#0000FF">*----------------------------------------------------------</font>
+<font color ="#0000FF">*</font>
+<font color ="#0000FF">* Message class: ZCA_MSG</font>
+<font color ="#0000FF">*428   일반 데이터행만 클릭해주세요.</font>
+<font color ="#0000FF">*429   선택한 데이터를 찾을 수 없습니다.</font>
+<font color ="#0000FF">*436   존재하지 않는 타입입니다. (A, B, C 중 입력)</font>
+</pre>
+<hr>
+<font size="2" face = "Sans Serif">Extracted by Direct Download Enterprise version 1.3.1 - E.G.Mellodew. 1998-2005 UK. Sap Release 758
+</font>
+</body>
+</html>

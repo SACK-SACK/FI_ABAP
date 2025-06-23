@@ -1,0 +1,221 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 3.2//EN">
+<html>
+<head>
+<title>ZCA_FI050_TOP_</title>
+</head>
+<body bgcolor="#FFFFE0">
+<font size="3" face = "Arial" color="#000000"><b>Code listing for: ZCA_FI050_TOP_</b></font>
+<br>
+<font size="3" face = "Arial" color="#000000"><b>Description:  TOP</b></font>
+<hr>
+<pre width="100">
+<font color ="#0000FF">*&---------------------------------------------------------------------*</font>
+<font color ="#0000FF">*& Include          ZCA_FI050_TOP</font>
+<font color ="#0000FF">*&---------------------------------------------------------------------*</font>
+
+<font color ="#0000FF">* 사용 테이블</font>
+TABLES: ZCA_FIT040,  " 전표 헤더
+        ZCA_FIT050,  " 전표 아이템
+        ZCA_FIT090,  " 고객 원장
+        ZCA_SDT120,  " [SD] 대금관리 Header
+        ZCA_KNA1,    " 고객 BP
+        ZCA_FIT080.  " 은행 마스터
+
+<font color ="#0000FF">**---------------------------------------------------------------------*</font>
+<font color ="#0000FF">**  AR(고객 원장) [ZCA_FIT090]</font>
+<font color ="#0000FF">** : 미결 전표(undecide) / 반제 전표(clearing)</font>
+<font color ="#0000FF">**---------------------------------------------------------------------*</font>
+" 미결 전표 TYPE
+TYPES : BEGIN OF TY_CUST.
+          include structure <a href ="zca_fit090/dictionary-zca_fit090.html">ZCA_FIT090</a>.
+TYPES :   light     TYPE C LENGTH 1,           " 수금 조건에 따른 Exception Column
+          due_date  TYPE zca_fit090-bldat,     " 수금 마감 날짜
+          gltxt     TYPE zca_gltxt,            " 계정명
+          bstxt     TYPE zca_bstxt,            " 전기키명
+          descr     TYPE zca_descr,            " 전표유형명
+        END OF ty_cust.
+
+" 반제 전표 TYPE
+TYPES : BEGIN OF TY_CLEAR.
+          include structure <a href ="zca_fit090/dictionary-zca_fit090.html">ZCA_FIT090</a>.
+TYPES :   gltxt     TYPE zca_gltxt,            " 계정명
+          bstxt     TYPE zca_bstxt,            " 전기키명
+          descr     TYPE zca_descr,            " 전표유형명
+        END OF ty_clear.
+
+<font color ="#0000FF">* AR(고객 원장) [ZCA_FIT090] : 전체</font>
+DATA : gs_fit090     TYPE zca_fit090,
+       gt_fit090     TYPE TABLE OF zca_fit090.
+
+<font color ="#0000FF">* 미결 전표</font>
+DATA : gt_undecide   TYPE TABLE OF ty_cust,
+       gs_undecide   TYPE ty_cust.
+DATA : gt_selected   TYPE TABLE OF ty_cust,
+       gs_selected   TYPE ty_cust.
+
+<font color ="#0000FF">* 반제 전표</font>
+DATA : gt_clearing   TYPE TABLE OF ty_clear,
+       gs_clearing   TYPE ty_clear.
+
+<font color ="#0000FF">* 구체적인 전표 아이템 조회</font>
+DATA : BEGIN OF gs_items.
+         include structure <a href ="zca_fit050/dictionary-zca_fit050.html">zca_fit050</a>.
+DATA :   debit       LIKE zca_fit050-dmbtr,
+         credit      LIKE zca_fit050-dmbtr,
+       END OF gs_items.
+
+DATA : gt_items      LIKE TABLE OF gs_items. " 전표 아이템
+
+<font color ="#0000FF">* 새로고침 flag</font>
+DATA gv_refresh.
+
+DATA gs_sdt120       TYPE zca_sdt120. " 신용등급 관리
+
+<font color ="#0000FF">*---------------------------------------------------------------------*</font>
+<font color ="#0000FF">* ALV관련 선언</font>
+<font color ="#0000FF">*---------------------------------------------------------------------*</font>
+<font color ="#0000FF">* ALV에 출력할 필드 정보를 구성하고 ALV에게 전달한다.</font>
+DATA: GT_FIELD_CAT TYPE LVC_T_FCAT.
+
+DATA: GT_FIELD_CAT_TAB TYPE LVC_T_FCAT,
+      GS_FIELD_CAT_TAB TYPE LVC_S_FCAT.
+
+<font color ="#0000FF">* ALV Field Catalog</font>
+DATA gt_field_cat_0110 TYPE lvc_t_fcat.
+DATA gt_field_cat_0120 TYPE lvc_t_fcat.
+DATA gt_field_cat_0120_b TYPE lvc_t_fcat.
+DATA gt_field_cat_0130 TYPE lvc_t_fcat.
+
+DATA gs_field_cat TYPE lvc_s_fcat.
+
+<font color ="#0000FF">* Container / Grid</font>
+DATA: go_container_0100 TYPE REF TO cl_gui_custom_container,  "
+      go_alv_grid_0100 TYPE REF TO cl_gui_alv_grid.
+
+DATA: go_container_0110 TYPE REF TO cl_gui_custom_container,
+      go_alv_grid_0110 TYPE REF TO cl_gui_alv_grid.
+
+DATA: go_container_0120 TYPE REF TO cl_gui_custom_container,
+      go_alv_grid_0120 TYPE REF TO cl_gui_alv_grid.
+
+DATA: go_container_0120_B TYPE REF TO cl_gui_custom_container,
+      go_alv_grid_0120_B TYPE REF TO cl_gui_alv_grid.
+
+DATA: go_container_0130 TYPE REF TO cl_gui_custom_container,
+      go_alv_grid_0130 TYPE REF TO cl_gui_alv_grid.
+
+<font color ="#0000FF">* ALV Layout을 다루는 Structure 변수</font>
+<font color ="#0000FF">*DATA GS_LAYOUT TYPE LVC_S_LAYO.</font>
+<font color ="#0000FF">*DATA GS_LAYOUT_TAB TYPE LVC_S_LAYO.</font>
+DATA gs_layout_0110 TYPE lvc_s_layo.
+DATA gs_layout_0120 TYPE lvc_s_layo.
+DATA gs_layout_0120_b TYPE lvc_s_layo.
+DATA gs_layout_0130 TYPE lvc_s_layo.
+
+<font color ="#0000FF">* ALV Variant를 다루는 Structure 변수</font>
+DATA GS_VARIANT TYPE DISVARIANT.
+
+DATA gs_variant_0110 TYPE disvariant.
+DATA gs_variant_0120 TYPE disvariant.
+DATA gs_variant_0120_b TYPE disvariant.
+DATA gs_variant_0130 TYPE disvariant.
+
+<font color ="#0000FF">*DATA gs_save.</font>
+DATA gv_save_0110.
+DATA gv_save_0120.
+DATA gv_save_0120_b.
+DATA gv_save_0130.
+
+<font color ="#0000FF">**---------------------------------------------------------------------*</font>
+<font color ="#0000FF">** Screen 관련 선언</font>
+<font color ="#0000FF">**---------------------------------------------------------------------*</font>
+<font color ="#0000FF">* 화면 및 ALV 출력에 필요한 변수를 선언</font>
+DATA OK_CODE TYPE SY-UCOMM. " 뒤로가기, 나가기, 취소하기 등 사용자 액션에 대한 펑션코드값
+
+DATA : red_num    TYPE int4,  " 수금일이 지난 건수
+       yellow_num TYPE int4,  " 수금 기한이 7일 이내로 남은 건수
+       green_num  TYPE int4.  " 수금 기간이 7일 이상인 건수
+
+DATA : total_price LIKE gs_fit090-dmbtr,              " 총 미결 금액
+       total_cuky  LIKE gs_fit090-waers VALUE 'KRW'.  " 통화 코드
+
+DATA : BEGIN OF screen0100,
+         undecide_num    TYPE int4,
+         clear_num   TYPE int4,
+         undecide_price  TYPE zca_dmbtr,
+         clear_price TYPE zca_dmbtr,
+         undecide_cuky   TYPE zca_wears,
+         clear_cuky  TYPE zca_wears,
+       END OF screen0100.
+
+DATA: gs_kna1 TYPE zca_kna1.   " Screen 120에서 사용하는 구조
+
+<font color ="#0000FF">*--------------------------------------------------------------------*</font>
+<font color ="#0000FF">* Screen 0110.</font>
+<font color ="#0000FF">*--------------------------------------------------------------------*</font>
+<font color ="#0000FF">* 수금기한 상태(빨/노/초록)에 따라 건수 및 금액을 집계</font>
+DATA : BEGIN OF screen0110,
+         red_num      TYPE int4,          " 수금기한 경과 건수
+         yellow_num   TYPE int4,          " 수금기한 임박(7일 이내) 건수
+         green_num    TYPE int4,          " 여유 있음(7일 이상) 건수
+         total_num    TYPE int4,          " 전체 미결 건수
+         red_price    TYPE zca_dmbtr,     " 경과 금액
+         yellow_price TYPE zca_dmbtr,     " 임박 금액
+         green_price  TYPE zca_dmbtr,     " 여유 금액
+         total_price  TYPE zca_dmbtr,     " 전체 금액
+         red_cuky     TYPE zca_wears,     " 경과 통화
+         yellow_cuky  TYPE zca_wears,     " 임박 통화
+         green_cuky   TYPE zca_wears,     " 여유 통화
+         total_cuky   TYPE zca_wears,     " 전체 통화
+       END OF screen0110.
+
+<font color ="#0000FF">**---------------------------------------------------------------------*</font>
+<font color ="#0000FF">** Tabstrip 관련 변수</font>
+<font color ="#0000FF">**---------------------------------------------------------------------*</font>
+<font color ="#0000FF">* 서브스크린 전환을 위한 화면 번호 저장 변수</font>
+DATA dynnr     TYPE sy-dynnr.     " 현재 활성화된 서브스크린 번호
+DATA dynnr_pop TYPE sy-dynnr.     " 팝업 서브스크린 번호
+
+<font color ="#0000FF">* Tabstrip 컨트롤 선언 (화면 구성 제어용)</font>
+CONTROLS my_tabstrip  TYPE TABSTRIP.
+CONTROLS pop_tabstrip TYPE TABSTRIP.
+
+<font color ="#0000FF">*--------------------------------------------------------------------*</font>
+<font color ="#0000FF">* Screen 0130</font>
+<font color ="#0000FF">*--------------------------------------------------------------------*</font>
+<font color ="#0000FF">* 화면 0130: 수금 방식 선택 및 은행 정보 표시</font>
+DATA : BEGIN OF screen0130,
+         cash        TYPE char1 VALUE 'X',  " 현금 여부 (기본값 'X')
+         bank        TYPE char30,           " 은행명
+         total_price TYPE zca_dmbtr VALUE 0," 수금 총액
+         total_cuky  TYPE zca_waers,        " 수금 통화
+       END OF screen0130.
+
+<font color ="#0000FF">* 현재 선택된 BP 코드</font>
+DATA gv_bpcode TYPE zca_bpcode.
+
+<font color ="#0000FF">*--------------------------------------------------------------------*</font>
+<font color ="#0000FF">* Screen 0140 ~ 160</font>
+<font color ="#0000FF">*--------------------------------------------------------------------*</font>
+<font color ="#0000FF">* 수금 항목의 통화 코드 (예: 차변/대변 항목 비교용)</font>
+DATA : cuky1 LIKE ZCA_SDT120-waers VALUE 'KRW',
+       cuky2 LIKE ZCA_SDT120-waers VALUE 'KRW',
+       cuky3 LIKE ZCA_SDT120-waers VALUE 'KRW'.
+
+<font color ="#0000FF">* 전표 상세 항목을 팝업으로 출력하기 위한 구조체 정의</font>
+TYPES : BEGIN OF ty_popup.
+          include structure <a href ="zca_fit050/dictionary-zca_fit050.html">zca_fit050</a>.
+TYPES :   debit  TYPE zca_dmbtr,     " 차변 금액
+          credit TYPE zca_dmbtr,     " 대변 금액
+          bstxt  TYPE zca_bstxt,     " 전기키명
+        END OF ty_popup.
+
+<font color ="#0000FF">* 팝업 전표 항목 데이터</font>
+DATA : gs_popup_data TYPE ty_popup,
+       gt_popup_data TYPE TABLE OF ty_popup.
+</pre>
+<hr>
+<font size="2" face = "Sans Serif">Extracted by Direct Download Enterprise version 1.3.1 - E.G.Mellodew. 1998-2005 UK. Sap Release 758
+</font>
+</body>
+</html>

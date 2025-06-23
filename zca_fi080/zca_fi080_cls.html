@@ -1,0 +1,134 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 3.2//EN">
+<html>
+<head>
+<title>ZCA_FI080_CLS</title>
+</head>
+<body bgcolor="#FFFFE0">
+<font size="3" face = "Arial" color="#000000"><b>Code listing for: ZCA_FI080_CLS</b></font>
+<br>
+<font size="3" face = "Arial" color="#000000"><b>Description:  Include ZCA_FI080_CLS</b></font>
+<hr>
+<pre width="100">
+<font color ="#0000FF">*&---------------------------------------------------------------------*</font>
+<font color ="#0000FF">*& Include          ZCA_FI080_CLS</font>
+<font color ="#0000FF">*&---------------------------------------------------------------------*</font>
+CLASS lcl_event_handler DEFINITION.
+  PUBLIC SECTION.
+    CLASS-METHODS:
+      on_double_click
+        FOR EVENT node_double_click OF cl_gui_alv_tree
+        IMPORTING node_key sender,
+
+      " ALV event
+      on_hotspot_click
+        FOR EVENT hotspot_click OF cl_gui_alv_grid
+        IMPORTING e_row_id
+                  e_column_id
+                  sender,
+
+      on_close
+        FOR EVENT close OF cl_gui_dialogbox_container
+        IMPORTING sender.
+<font color ="#0000FF">*      " ALV의 툴바에 버튼을 다루는 이벤트</font>
+<font color ="#0000FF">*      on_toolbar</font>
+<font color ="#0000FF">*        FOR EVENT toolbar OF cl_gui_alv_grid</font>
+<font color ="#0000FF">*        IMPORTING e_object sender,</font>
+<font color ="#0000FF">*</font>
+<font color ="#0000FF">*      " 버튼을 클릭했을 때 작동하는 이벤트</font>
+<font color ="#0000FF">*      on_user_command</font>
+<font color ="#0000FF">*        FOR EVENT user_command OF cl_gui_alv_grid</font>
+<font color ="#0000FF">*        IMPORTING e_ucomm sender,</font>
+<font color ="#0000FF">*</font>
+<font color ="#0000FF">*      on_alv_double_click FOR EVENT double_click OF cl_gui_alv_grid</font>
+<font color ="#0000FF">*        IMPORTING e_row         " 내가 double click 한 행 번호</font>
+<font color ="#0000FF">*                  e_column sender.    " 내가 double click 한 열 이름</font>
+
+ENDCLASS.
+
+CLASS lcl_event_handler IMPLEMENTATION.
+  METHOD on_double_click.
+
+    IF sender EQ go_alv_tree.
+      " ALV 노드 키에서 내부 노드 키 (my_key) 찾기
+      READ TABLE gt_node_key_map INTO DATA(ls_map)
+        WITH KEY real_key = node_key.
+      IF sy-subrc &lt;&gt; 0.
+        RETURN.
+      ENDIF.
+
+      " 내부 노드 키로 gt_balance_tree 접근
+      READ TABLE gt_balance_tree INTO DATA(ls_node)
+        WITH KEY node_key = ls_map-my_key.
+      IF sy-subrc &lt;&gt; 0 OR ls_node-saknr IS INITIAL.
+        RETURN.
+      ENDIF.
+
+      " 손익 노드일 때는 별도 팝업 처리
+      IF ls_map-my_key = '3_0_0_399999'.
+        PERFORM show_profit_popup.
+        RETURN.
+      ENDIF.
+
+
+      " 전역 변수 셋팅 및 원장 호출
+      zca_fit110-saknr = ls_node-saknr.
+      zca_fit110-gltxt = ls_node-gltxt.
+
+      PERFORM show_gl_ledger USING ls_node-saknr.
+    ENDIF.
+  ENDMETHOD.
+
+  METHOD on_hotspot_click.
+
+    IF sender EQ go_alv_grid_r.
+      IF e_row_id-rowtype IS NOT INITIAL .
+        MESSAGE i428. " 일반 데이터행만 클릭해주세요.
+        RETURN.
+      ENDIF.
+
+      CLEAR gs_gl_detail.
+      READ TABLE gt_gl_detail INTO gs_gl_detail INDEX e_row_id-index.
+
+      IF sy-subrc NE 0.
+        MESSAGE i429  DISPLAY LIKE 'W'. " 선택한 데이터를 찾을 수 없습니다.
+        RETURN .
+      ENDIF.
+
+      CASE e_column_id-fieldname.
+        WHEN 'BPCODE'.
+          IF gs_gl_detail-bpcode IS NOT INITIAL.
+            call function <a href ="zca_fi_bp_popup_small/zca_fi_bp_popup_small.html">'ZCA_FI_BP_POPUP_SMALL'</a>
+              EXPORTING
+                iv_bpcode = gs_gl_detail-bpcode.                 " BP 코드
+          ENDIF.
+
+        WHEN 'BELNR'.
+          call function <a href ="zca_fi_docu_detail/zca_fi_docu_detail.html">'ZCA_FI_DOCU_DETAIL'</a>
+            EXPORTING
+<font color ="#0000FF">*             iv_bukrs = '1001'           " 회사코드</font>
+              iv_gjahr = gs_gl_detail-pyear                 " 회계연도
+              iv_belnr = gs_gl_detail-belnr.                 " 전표번호
+
+      ENDCASE.
+    ENDIF.
+
+  ENDMETHOD.
+
+  METHOD on_close.
+
+    IF go_alv_popup IS NOT INITIAL .
+      CALL METHOD go_alv_popup-&gt;free. " ALV 객체 삭제
+      FREE go_alv_popup.   " 객체 연결 정보 삭제
+    ENDIF.
+
+    CALL METHOD sender-&gt;free. " 닫기 버튼이 눌렸던 팝업 컨테이너를 삭제
+    FREE go_cont_popup.       " 닫기 버튼이 눌렸던 팝업 컨테이너 연결 정보를 삭제
+
+  ENDMETHOD.
+ENDCLASS.
+</pre>
+<hr>
+<font size="2" face = "Sans Serif">Extracted by Direct Download Enterprise version 1.3.1 - E.G.Mellodew. 1998-2005 UK. Sap Release 758
+</font>
+</body>
+</html>

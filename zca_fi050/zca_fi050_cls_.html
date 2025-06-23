@@ -1,0 +1,376 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 3.2//EN">
+<html>
+<head>
+<title>ZCA_FI050_CLS_</title>
+</head>
+<body bgcolor="#FFFFE0">
+<font size="3" face = "Arial" color="#000000"><b>Code listing for: ZCA_FI050_CLS_</b></font>
+<br>
+<font size="3" face = "Arial" color="#000000"><b>Description:  CLS</b></font>
+<hr>
+<pre width="100">
+<font color ="#0000FF">*&---------------------------------------------------------------------*</font>
+<font color ="#0000FF">*& Include          ZCA_FI050_CLS</font>
+<font color ="#0000FF">*&---------------------------------------------------------------------*</font>
+CLASS lcl_event_handler DEFINITION .
+
+  PUBLIC SECTION .
+<font color ="#0000FF">*-- Static Method</font>
+    CLASS-METHODS :
+
+      " ALV에서 발생한 핫스팟 이벤트를 위한 메소드
+      on_hotspot_click
+        FOR EVENT hotspot_click OF cl_gui_alv_grid
+        IMPORTING e_row_id
+                  e_column_id
+                  sender,  " sender : 이벤트 발신자 객체 지정 역할
+
+      " ALV의 툴바에 버튼을 다루는 이벤트
+      on_toolbar
+        FOR EVENT toolbar OF cl_gui_alv_grid
+        IMPORTING e_object sender,
+
+      " 버튼을 클릭했을 때 작동하는 이벤트
+      on_user_command
+        FOR EVENT user_command OF cl_gui_alv_grid
+        IMPORTING e_ucomm sender.
+
+
+ENDCLASS.
+
+<font color ="#0000FF">*&---------------------------------------------------------------------*</font>
+<font color ="#0000FF">*& Class (Implementation) lcl_event_handler</font>
+<font color ="#0000FF">*&---------------------------------------------------------------------*</font>
+CLASS lcl_event_handler IMPLEMENTATION.
+
+  METHOD on_hotspot_click.
+
+    CASE sender.  " 이벤트가 발생한 ALV 객체 구분
+      WHEN go_alv_grid_0110.  " 첫 번째 ALV (미결건 ALV)
+
+        " 필드명이 'KUNNR'(BP코드)이면서, 특수행이 아니거나 집계행('S')인 경우만 처리
+        " BP코드 서브 토탈 후 클릭 가능하도록 하기 위함
+        IF e_column_id-fieldname EQ 'KUNNR' AND  e_row_id-rowtype+0(1) EQ 'S' .
+          DATA: lv_value TYPE lvc_value.
+
+          CALL METHOD go_alv_grid_0110-&gt;get_current_cell
+            IMPORTING
+              e_value = lv_value.
+
+          " BP코드 기반 팝업 호출: BP 상세 정보 확인 목적
+          call function <a href ="zca_fi_bp_popup_small/zca_fi_bp_popup_small.html">'ZCA_FI_BP_POPUP_SMALL'</a>
+            EXPORTING
+              iv_bpcode = gs_undecide-kunnr.                 " BP 코드
+
+        ELSEIF  e_column_id-fieldname EQ 'LIFNR' AND e_row_id-rowtype IS INITIAL.
+          CLEAR  gs_undecide.
+          READ TABLE gt_undecide INTO  gs_undecide INDEX e_row_id-index.
+
+          IF sy-subrc NE 0.
+            MESSAGE i429  DISPLAY LIKE 'W'. " 선택한 데이터를 찾을 수 없습니다.
+            RETURN .
+          ENDIF.
+
+          call function <a href ="zca_fi_bp_popup_small/zca_fi_bp_popup_small.html">'ZCA_FI_BP_POPUP_SMALL'</a>
+            EXPORTING
+              iv_bpcode = gs_undecide-kunnr.                 " BP 코드
+
+        ELSEIF e_row_id-rowtype IS NOT INITIAL.
+          MESSAGE s428 DISPLAY LIKE 'W'. " 일반 데이터행만 클릭해주세요.
+          RETURN.
+        ENDIF.
+
+        CLEAR  gs_undecide.
+        READ TABLE gt_undecide INTO  gs_undecide INDEX e_row_id-index.
+
+        IF sy-subrc NE 0.
+          MESSAGE i429  DISPLAY LIKE 'W'. " 선택한 데이터를 찾을 수 없습니다.
+          RETURN .
+        ENDIF.
+
+        " 클릭한 필드명에 따라 처리 분기
+        CASE e_column_id-fieldname.
+          WHEN 'BELNR'. " 전표번호(BELNR) 셀을 클릭한 경우
+            " 전표 상세 정보 팝업 호출 (회계연도 + 전표번호 기반)
+            call function <a href ="zca_fi_docu_detail/zca_fi_docu_detail.html">'ZCA_FI_DOCU_DETAIL'</a>
+              EXPORTING
+                iv_gjahr = gs_undecide-gjahr                " 회계연도
+                iv_belnr = gs_undecide-belnr.               " 전표번호
+
+            " 전기키(BSCHL) 셀을 클릭한 경우
+          WHEN 'BSCHL'. " 전기키 상세 설명 팝업 호출
+            call function <a href ="zca_fi_tbsl/zca_fi_tbsl.html">'ZCA_FI_TBSL'</a>
+              EXPORTING
+                iv_bschl = gs_undecide-bschl.             " 전기키
+
+            " 참조문서(XBLNR) 셀을 클릭한 경우
+          WHEN 'XBLNR'. " 참고문서 ( 송장 / 전표 분리 )
+            DATA lv_type TYPE c.
+            " 참조문서번호 앞 3자리가 'INV'이면 청구서로 간주하고 타입 지정
+            IF gs_undecide-xblnr+0(3) EQ 'INV'.
+              lv_type = 'C'. " 청구서
+            ELSE.
+              lv_type = 'A'. " 전표
+            ENDIF.
+
+            " 참조문서 팝업 호출: 타입에 따라 전표 or 청구서로 분기 처리
+            call function <a href ="zca_fi_xblnr/zca_fi_xblnr.html">'ZCA_FI_XBLNR'</a>
+              EXPORTING
+                iv_type   = lv_type                " 전표('A')/송장('B')/청구서('C')
+<font color ="#0000FF">*                iv_belnr  = gs_undecide-xblnr                " 전표번호(type이 A일때)</font>
+                iv_inv_no = gs_undecide-xblnr.           " 청구서번호(type이 C일때)
+
+        ENDCASE.
+
+      WHEN go_alv_grid_0120.
+
+        IF e_row_id-rowtype IS NOT INITIAL.
+          MESSAGE s428 DISPLAY LIKE 'W'. " 일반 데이터행만 클릭해주세요.
+          RETURN.
+        ENDIF.
+
+        CLEAR gs_clearing.
+        READ TABLE gt_clearing INTO gs_clearing INDEX e_row_id-index.
+
+        IF sy-subrc NE 0.
+          MESSAGE i429  DISPLAY LIKE 'W'. " 선택한 데이터를 찾을 수 없습니다.
+          RETURN .
+        ENDIF.
+
+        CASE e_column_id-fieldname.
+          WHEN 'KUNNR'.
+            call function <a href ="zca_fi_bp_popup_small/zca_fi_bp_popup_small.html">'ZCA_FI_BP_POPUP_SMALL'</a>
+              EXPORTING
+                iv_bpcode = gs_clearing-kunnr.                 " BP 코드
+
+          WHEN 'AUGBL'.
+            call function <a href ="zca_fi_docu_detail/zca_fi_docu_detail.html">'ZCA_FI_DOCU_DETAIL'</a>
+              EXPORTING
+                iv_gjahr = gs_clearing-gjahr                 " 회계연도
+                iv_belnr = gs_clearing-augbl.                 " 전표번호
+
+          WHEN 'BELNR'. " 전표 번호
+            REFRESH gt_items.
+            PERFORM make_gt_items USING gs_clearing-bukrs
+                                        gs_clearing-belnr
+                                        gs_clearing-gjahr.
+            " 고객 정보 채우기
+            PERFORM make_cust_info USING gs_clearing-kunnr.
+
+            go_alv_grid_0120_b-&gt;refresh_table_display( ).
+            LEAVE TO SCREEN 0100.
+
+          WHEN 'BSCHL'. " 전기키
+            call function <a href ="zca_fi_tbsl/zca_fi_tbsl.html">'ZCA_FI_TBSL'</a>
+              EXPORTING
+                iv_bschl = gs_clearing-bschl.                 " 전기키
+
+          WHEN 'XBLNR'. " 참조문서 ( 송장 / 전표 분리 )
+            IF gs_clearing-xblnr+0(3) EQ 'INV'.
+              lv_type = 'C'. " 청구서
+            ELSE.
+              lv_type = 'A'. " 전표
+            ENDIF.
+
+            call function <a href ="zca_fi_xblnr/zca_fi_xblnr.html">'ZCA_FI_XBLNR'</a>
+              EXPORTING
+                iv_type   = lv_type                " 전표('A')/송장('B')/청구서('C')
+                iv_belnr  = gs_clearing-xblnr                " 전표번호(type이 A일때)
+                iv_inv_no = gs_clearing-xblnr.                " 청구서번호(type이 C일때)
+
+        ENDCASE.
+
+  WHEN go_alv_grid_0120_b.
+
+    IF e_row_id-rowtype IS NOT INITIAL.
+      MESSAGE s428 DISPLAY LIKE 'W'. " 일반 데이터행만 클릭해주세요.
+      RETURN.
+    ENDIF.
+
+    CLEAR gs_items.
+    READ TABLE gt_items INTO gs_items INDEX e_row_id-index.
+
+    IF sy-subrc NE 0.
+      MESSAGE i429  DISPLAY LIKE 'W'. " 선택한 데이터를 찾을 수 없습니다.
+      RETURN .
+    ENDIF.
+
+    CASE e_column_id-fieldname.
+
+      WHEN 'BSCHL'. " 전기키
+        call function <a href ="zca_fi_tbsl/zca_fi_tbsl.html">'ZCA_FI_TBSL'</a>
+          EXPORTING
+            iv_bschl = gs_items-bschl.                 " 전기키
+
+      WHEN 'BPCODE'.
+        call function <a href ="zca_fi_bp_popup_small/zca_fi_bp_popup_small.html">'ZCA_FI_BP_POPUP_SMALL'</a>
+          EXPORTING
+            iv_bpcode = gs_items-bpcode.                 " BP 코드
+
+      WHEN 'AUGBL'.
+        call function <a href ="zca_fi_docu_detail/zca_fi_docu_detail.html">'ZCA_FI_DOCU_DETAIL'</a>
+          EXPORTING
+            iv_gjahr = gs_items-gjahr                 " 회계연도
+            iv_belnr = gs_items-augbl.                 " 전표번호
+
+    ENDCASE.
+
+  ENDCASE.
+
+
+  ENDMETHOD.
+
+  METHOD on_toolbar.
+    DATA ls_button LIKE LINE OF e_object-&gt;mt_toolbar.
+    DATA lv_line TYPE i.
+    DATA green_line TYPE i VALUE 0.
+    DATA yellow_line TYPE i VALUE 0.
+    DATA red_line TYPE i VALUE 0.
+    DATA da_line TYPE i VALUE 0.
+    DATA dz_line TYPE i VALUE 0.
+
+    CASE sender.
+      WHEN go_alv_grid_0110.
+
+          " 라인 수 확인하기
+          DESCRIBE TABLE gt_undecide LINES lv_line.
+
+          LOOP AT gt_undecide INTO gs_undecide.
+            CASE gs_undecide-light.
+              WHEN '3'.
+                green_line  += 1. " 수금일 7일 이상 남음
+              WHEN '2'.
+                yellow_line += 1. " 수금일 7일 이내
+              WHEN '1'.
+                red_line += 1. " 수금 기간 만료
+            ENDCASE.
+          ENDLOOP.
+
+          CLEAR ls_button.
+          ls_button-butn_type = 3.    " 3 = 구분자
+          APPEND ls_button TO e_object-&gt;mt_toolbar.
+
+          CLEAR ls_button.
+          ls_button-function = 'INIT_FILTER'.
+          ls_button-icon     = icon_refresh.
+          ls_button-text     = 'Total:'(a01) && lv_line.
+          APPEND ls_button TO e_object-&gt;mt_toolbar.
+
+          CLEAR ls_button.
+          ls_button-function = 'GREEN_FILTER'.
+          ls_button-icon     = icon_led_green.
+          ls_button-text     = '7일 이후:'(a02) && green_line.
+          APPEND ls_button TO e_object-&gt;mt_toolbar.
+
+          CLEAR ls_button.
+          ls_button-function = 'YELLOW_FILTER'.
+          ls_button-icon     = icon_led_yellow.
+          ls_button-text     = '7일 이내:'(a03) && yellow_line.
+          APPEND ls_button TO e_object-&gt;mt_toolbar.
+
+          CLEAR ls_button.
+          ls_button-function = 'RED_FILTER'.
+          ls_button-icon     = icon_led_red.
+          ls_button-text     = '수금경과:'(a04) && red_line.
+          APPEND ls_button TO e_object-&gt;mt_toolbar.
+
+          CLEAR ls_button.
+          ls_button-butn_type = 3.    " 3 = 구분자
+          APPEND ls_button TO e_object-&gt;mt_toolbar.
+
+          CLEAR ls_button.
+          ls_button-function = 'PAYMENT'.
+          ls_button-icon     = icon_create_text.
+          ls_button-text     = '수금처리'(a05).
+          APPEND ls_button TO e_object-&gt;mt_toolbar.
+
+
+      WHEN go_alv_grid_0120.
+
+         DESCRIBE TABLE gt_clearing LINES lv_line.
+
+        LOOP AT gt_clearing INTO gs_clearing.
+          CASE gs_clearing-blart.
+            WHEN 'DA' .
+              da_line += 1. " 공급업체 전표
+            WHEN 'DZ'.
+              dz_line += 1. " 공급업체 지급 전표
+          ENDCASE.
+        ENDLOOP.
+
+        CLEAR ls_button.
+        ls_button-butn_type = 3.    " 3 = 구분자
+        APPEND ls_button TO e_object-&gt;mt_toolbar.
+
+        CLEAR ls_button.
+        ls_button-function = 'INIT_FILTER_0120'.
+        ls_button-icon     = icon_refresh.
+        ls_button-text     = 'Total:'(a01) && lv_line.
+        APPEND ls_button TO e_object-&gt;mt_toolbar.
+
+        CLEAR ls_button.
+        ls_button-function = 'DA_0120'.
+        ls_button-icon     = icon_incoming_object.
+        ls_button-text     = '고객 전표(DA)' && ':' && da_line.
+        APPEND ls_button TO e_object-&gt;mt_toolbar.
+
+        CLEAR ls_button.
+        ls_button-function = 'DZ_0120'.
+        ls_button-icon     = icon_outgoing_object.
+        ls_button-text     = '고객 지급(DZ)' && ':' && dz_line.
+        APPEND ls_button TO e_object-&gt;mt_toolbar.
+
+
+    ENDCASE.
+
+
+
+  ENDMETHOD.
+
+  METHOD on_user_command.
+
+    CASE sender.
+      WHEN go_alv_grid_0110.
+
+        CASE e_ucomm.
+
+          WHEN 'INIT_FILTER'.
+            PERFORM set_alv_filter USING space.
+
+          WHEN 'GREEN_FILTER'.
+            PERFORM set_alv_filter USING '3'.
+
+          WHEN 'YELLOW_FILTER'.
+            PERFORM set_alv_filter USING '2'.
+
+          WHEN 'RED_FILTER'.
+            PERFORM set_alv_filter USING '1'.
+
+          WHEN 'PAYMENT'.
+            PERFORM make_clearing. " 수금처리
+
+        ENDCASE.
+
+      WHEN go_alv_grid_0120.
+        CASE e_ucomm.
+          WHEN 'INIT_FILTER_0120'.
+            PERFORM set_clearing_filter USING space go_alv_grid_0120.
+          WHEN 'DA_0120'.
+            PERFORM set_clearing_filter USING 'DA' go_alv_grid_0120.
+          WHEN 'DZ_0120'.
+            PERFORM set_clearing_filter USING 'DZ' go_alv_grid_0120.
+        ENDCASE.
+
+     ENDCASE.
+
+  ENDMETHOD.
+
+
+
+ENDCLASS.
+</pre>
+<hr>
+<font size="2" face = "Sans Serif">Extracted by Direct Download Enterprise version 1.3.1 - E.G.Mellodew. 1998-2005 UK. Sap Release 758
+</font>
+</body>
+</html>

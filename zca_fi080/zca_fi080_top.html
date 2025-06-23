@@ -1,0 +1,172 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 3.2//EN">
+<html>
+<head>
+<title>ZCA_FI080_TOP</title>
+</head>
+<body bgcolor="#FFFFE0">
+<font size="3" face = "Arial" color="#000000"><b>Code listing for: ZCA_FI080_TOP</b></font>
+<br>
+<font size="3" face = "Arial" color="#000000"><b>Description:  Include ZCA_FI080_TOP</b></font>
+<hr>
+<pre width="100">
+<font color ="#0000FF">*&---------------------------------------------------------------------*</font>
+<font color ="#0000FF">*& Include          ZCA_FI080_TOP</font>
+<font color ="#0000FF">*&---------------------------------------------------------------------*</font>
+TABLES : zca_fit110.
+
+" 결산 관리 테이블에 대한 itab / wa
+DATA : gt_fit110 TYPE TABLE OF zca_fit110,
+       gs_fit110 TYPE zca_fit110.
+
+<font color ="#0000FF">*--- 전표 관련</font>
+DATA : gt_header TYPE TABLE OF zca_fit040,
+       gs_header TYPE zca_fit040,
+       gt_item   TYPE TABLE OF zca_fit050,
+       gs_item   TYPE zca_fit050.
+DATA gt_date_range TYPE TABLE OF zca_date.
+
+<font color ="#0000FF">*--- 손익</font>
+DATA : gt_profit_summary TYPE zca_fiy020,             " 주차별 손익 담을 테이블
+       gs_profit_summary TYPE zca_fi_profit_summary,
+       gs_year_summary   TYPE zca_fi_profit_summary,  " 해당 연도 누계 손익
+       gv_net_income     TYPE zca_dmbtr.              " 최종 당기순이익
+
+<font color ="#0000FF">*--- G/L 계정명</font>
+DATA : gt_fit010 TYPE TABLE OF zca_fit010,
+       gs_fit010 TYPE zca_fit010.
+<font color ="#0000FF">*--- 계정 관련</font>
+TYPES: BEGIN OF ty_acc_sum,
+         saknr           TYPE zca_saknr,
+         gltxt           TYPE zca_gltxt,
+         amount          TYPE zca_dmbtr,
+         category        TYPE string,             " 자산 / 부채 / 자본
+         category_sort   TYPE i,                  " 자산 = 1 / 부채 = 2 / 자본 = 3
+         category_mid    TYPE string,             " 자산 &gt; 유동자산, 비유동 자산
+         mid_sort        TYPE i,
+         category_detail TYPE string, " 유동자산 등
+         detail_sort     TYPE i,      " 중분류용 정렬번호
+       END OF ty_acc_sum.
+DATA: gt_acc_sum TYPE SORTED TABLE OF ty_acc_sum WITH UNIQUE KEY saknr.
+
+<font color ="#0000FF">*--- 재무상태표 Tree 구성</font>
+TYPES: BEGIN OF ty_balance_node,
+         node_key        TYPE lvc_nkey,           " ALV 노드 키
+         relatkey        TYPE lvc_nkey,           " 상위 노드 키
+         level           TYPE i,                  " 트리 깊이: 1=대분류, 2=중분류, 3=계정
+         category        TYPE string,             " 자산 / 부채 / 자본
+         category_sort   TYPE i,                  " 자산 = 1 / 부채 = 2 / 자본 = 3
+         category_mid    TYPE string,             " 자산 &gt; 유동자산, 비유동 자산
+         mid_sort        TYPE i,
+         category_detail TYPE string,             " 유동 자산 &gt; 당좌자산 , 재고자산
+         detail_sort     TYPE i,
+         saknr           TYPE zca_saknr,          " 계정
+         gltxt           TYPE zca_txt20,          " 계정명
+         amount          TYPE zca_dmbtr,          " 금액
+         waers           TYPE zca_waers,          " 통화코드
+         isfolder        TYPE abap_bool,          " 상위폴더 여부
+       END OF ty_balance_node.
+
+TYPES: ty_t_balance_node TYPE STANDARD TABLE OF ty_balance_node WITH EMPTY KEY.
+
+DATA gt_tree TYPE ty_t_balance_node.
+DATA: gt_balance_tree TYPE ty_t_balance_node,
+      gs_balance_tree TYPE ty_balance_node.
+
+<font color ="#0000FF">*--- 트리 노드 키 맵핑용</font>
+TYPES: BEGIN OF ty_node_key_map,
+         my_key   TYPE lvc_nkey, " 내가 만든 node_key
+         real_key TYPE lvc_nkey, " ALV가 발급한 실제 키
+       END OF ty_node_key_map.
+DATA: gt_node_key_map TYPE STANDARD TABLE OF ty_node_key_map WITH EMPTY KEY.
+
+<font color ="#0000FF">*--- 상세 전표 띄울 거</font>
+TYPES: BEGIN OF ty_gl_detail,
+         " 주차 기준
+         pyear       TYPE zca_pyear,
+         pmonth      TYPE zca_pmonth,
+         pweek       TYPE zca_pweek,
+
+         " 전표 기본 정보
+         budat       TYPE zca_budat, " 전기 일자
+         belnr       TYPE zca_belnr, " 전표 번호
+         bltxt       TYPE zca_bltxt, " 전표 헤더명
+
+         " 거래처
+         bpcode      TYPE zca_bpcode, " 거래처 코드
+         bpname      TYPE zca_bpname, " 거래처명
+
+         " 금액 정보
+         debit       TYPE zca_dmbtr, " 차변 금액
+         credit      TYPE zca_dmbtr, " 대변 금액
+         balance     TYPE zca_dmbtr, " 잔액
+         waers       TYPE zca_waers, " 통화코드
+         cell_colors TYPE lvc_t_scol,       " &lt;== 셀 색상 취급 필드 , ITAB 구조
+
+       END OF ty_gl_detail.
+
+TYPES: ty_t_gl_detail TYPE STANDARD TABLE OF ty_gl_detail WITH EMPTY KEY.
+
+DATA: gt_gl_detail TYPE ty_t_gl_detail,
+      gs_gl_detail TYPE ty_gl_detail.
+
+
+<font color ="#0000FF">*--------------------------------------------------------------------*</font>
+<font color ="#0000FF">* Screen 0100</font>
+<font color ="#0000FF">*--------------------------------------------------------------------*</font>
+DATA ok_code TYPE sy-ucomm.
+DATA : BEGIN OF screen0100,
+         asset       TYPE zca_dmbtr,
+         debt        TYPE zca_dmbtr,
+         cap         TYPE zca_dmbtr,
+         waers       TYPE zca_waers,
+         status_icon TYPE char30 VALUE icon_led_green,
+         status_text TYPE char30 VALUE '재무 상태 일치',
+         total TYPE zca_dmbtr,
+         cuky type zca_waers VALUE 'KRW',
+       END OF screen0100.
+
+<font color ="#0000FF">*--------------------------------------------------------------------*</font>
+<font color ="#0000FF">* ALV Grid + Tree</font>
+<font color ="#0000FF">*--------------------------------------------------------------------*</font>
+DATA : go_container   TYPE REF TO cl_gui_custom_container,
+       go_splitter    TYPE REF TO cl_gui_splitter_container,
+       go_container_l TYPE REF TO cl_gui_container,
+       go_container_r TYPE REF TO cl_gui_container,
+       go_alv_tree    TYPE REF TO cl_gui_alv_tree,
+       go_alv_grid_r  TYPE REF TO cl_gui_alv_grid.
+
+DATA gs_layout_r TYPE lvc_s_layo.
+DATA gs_variant_l TYPE disvariant.
+DATA gs_variant_r TYPE disvariant.
+DATA gv_save_l.
+DATA gv_save_r.
+
+<font color ="#0000FF">* ALV Field Catalog</font>
+DATA gt_field_cat_l TYPE lvc_t_fcat.
+DATA gs_field_cat_l TYPE lvc_s_fcat.
+
+DATA gt_field_cat_r TYPE lvc_t_fcat.
+DATA gs_field_cat_r TYPE lvc_s_fcat.
+
+<font color ="#0000FF">* ALV Tree layout</font>
+DATA: gt_layout_item TYPE lvc_t_layi,
+      gs_layout_item TYPE lvc_s_layi,
+      gs_layout_node TYPE lvc_s_layn.
+
+" Dialog Box
+DATA go_cont_popup TYPE REF TO cl_gui_dialogbox_container.
+DATA go_alv_popup TYPE REF TO cl_gui_alv_grid.
+
+DATA gs_layout_p TYPE lvc_s_layo.
+DATA gs_variant_p TYPE disvariant.
+DATA gv_save_p.
+
+<font color ="#0000FF">* ALV Field Catalog</font>
+DATA gt_field_cat_p TYPE lvc_t_fcat.
+DATA gs_field_cat_p TYPE lvc_s_fcat.
+</pre>
+<hr>
+<font size="2" face = "Sans Serif">Extracted by Direct Download Enterprise version 1.3.1 - E.G.Mellodew. 1998-2005 UK. Sap Release 758
+</font>
+</body>
+</html>

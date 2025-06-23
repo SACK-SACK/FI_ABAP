@@ -1,0 +1,142 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 3.2//EN">
+<html>
+<head>
+<title>ZCA_FI_DELIVERY_POST</title>
+</head>
+<body bgcolor="#FFFFE0">
+<font size="3" face = "Arial" color="#000000"><b>Code listing for function: ZCA_FI_DELIVERY_POST</b></font>
+<br>
+<font size="3" face = "Arial" color="#000000"><b>Description:  SD 출고 전표 생성 함수 (SDT100,110)</b></font>
+<hr>
+<pre width="100">
+FUNCTION ZCA_FI_DELIVERY_POST.
+<font color ="#0000FF">*"----------------------------------------------------------------------</font>
+<font color ="#0000FF">*"*"Local Interface:</font>
+<font color ="#0000FF">*"  IMPORTING</font>
+<font color ="#0000FF">*"     REFERENCE(IV_OUTNUM) TYPE  ZCA_OUTNUM</font>
+<font color ="#0000FF">*"  EXPORTING</font>
+<font color ="#0000FF">*"     REFERENCE(EV_BELNR) TYPE  ZCA_BELNR</font>
+<font color ="#0000FF">*"----------------------------------------------------------------------</font>
+<font color ="#0000FF">* 출고 문서 관련</font>
+
+<font color ="#0000FF">*       <a href ="global-zca_fi_delivery_post.html">Global data declarations</a></font>
+DATA : gs_sdt100 TYPE zca_sdt100,           " 출고문서 Header
+       gt_sdt110 TYPE TABLE OF zca_sdt110,  " 출고문서 Item
+       gs_sdt110 TYPE zca_sdt110.
+
+<font color ="#0000FF">* 전표 관련</font>
+DATA : gt_fit040 TYPE TABLE OF zca_fit040,  " Header
+       gs_FIT040 TYPE zca_fit040.
+
+DATA : gt_fit050 TYPE TABLE OF zca_fit050,  " Item
+       gs_FIT050 TYPE zca_fit050.
+
+<font color ="#0000FF">* 변수 선언</font>
+DATA : lv_fert_cost TYPE zca_mvapr,     " 완제품 매출 원가
+       lv_fert_total TYPE zca_mvapr,    " 완제품 총 원가
+       lv_halb_cost TYPE zca_mvapr,     " 반제품 매출 원가
+       lv_halb_total TYPE zca_mvapr,    " 반제품 총 원가
+       lv_cost      TYPE zca_mvapr,     " 최종 반영 매출 원가 (완 | 반)
+       lv_export_cost TYPE zca_mvapr,   " 받을 원가
+       lv_mtart     TYPE zca_mattype,   " 자재 유형
+       lv_saknr     TYPE zca_saknr,     " G/L 계정
+       lv_waers     TYPE zca_waers.     " 통화코드
+
+  " 출고문서 Header Select
+  SELECT SINGLE * FROM zca_sdt100
+           INTO gs_sdt100
+           WHERE outnum EQ iv_outnum.
+
+  " 출고문서 Item Select
+  SELECT * FROM zca_sdt110
+           INTO TABLE gt_sdt110
+           WHERE outnum EQ iv_outnum.
+
+
+<font color ="#0000FF">* LOOP AT gt_sdt110 INTO gs_sdt110.</font>
+
+    " 각 제품 유형별 원가 계산
+  call function <a href ="../zca_fi_post_cost_doc/zca_fi_post_cost_doc.html">'ZCA_FI_POST_COST_DOC'</a>
+    EXPORTING
+      iv_flag      = '1'              " 1 : 출고문서
+      iv_outnum    = iv_outnum      " 출고 문서 번호
+    IMPORTING
+      ev_fert_cost = lv_fert_cost      " 총 완제품 원가
+      ev_halb_cost = lv_halb_cost      " 총 반제품 원가
+      ev_mtart     = lv_mtart          " 자재 유형
+      ev_saknr     = lv_saknr          " G/L 계정
+      ev_waers     = lv_waers.         " 통화코드
+
+
+  " 총 매출 원가 : 반제품 원가 + 완제품 원가
+  " 왜? 반제품과 완제품을 동시에 구매하는 고객이 있을 수 있음.
+  lv_cost = lv_halb_cost + lv_fert_cost.
+
+  " 헤더 하나 생성 + 제품매출원가(차변) 아이템 생성
+  call function <a href ="../zca_fi_post_docu/zca_fi_post_docu.html">'ZCA_FI_POST_DOCU'</a>
+    EXPORTING
+      iv_bukrs  = '1001'                       " 회사코드
+      iv_gjahr  = gs_sdt100-lfdat+0(4)        " 회계연도
+      iv_blart  = 'DR'                         " 전표유형(이미 있는 헤더를 사용할 땐 X)
+      iv_bldat  = gs_sdt100-lfdat              " 증빙일자(이미 있는 헤더를 사용할 땐 X)
+      iv_budat  = gs_sdt100-lfdat              " 전기일자(이미 있는 헤더를 사용할 땐 X)
+      iv_bltxt  = '고객 제품 출고 전표'        " 전표 헤더 텍스트(이미 있는 헤더를 사용할 땐 X)
+      iv_xblnr  = gs_sdt100-outnum             " 참조문서(이미 있는 헤더를 사용할 땐 X)
+      iv_bschl  = 11                           " 전기키 : 고객 차변
+      iv_saknr  = '5100010000'                 " G/L 계정 : 제품 매출 원가
+      iv_dmbtr  = lv_cost                      " 금액(KRW)
+      iv_waers  = lv_waers                     " 통화코드
+      iv_bpcode = gs_sdt100-cuscode            " BP 코드
+      iv_augdt = 'X'                       " 반제 여부 : 생산 전표는 반제된 상태로 생성
+    IMPORTING
+      ev_bukrs  = gs_fit040-bukrs               " 회사코드
+      ev_belnr  = gs_fit040-belnr               " 전표번호
+      ev_gjahr  = gs_fit040-gjahr.              " 회계연도
+
+  " 반제품 가격이 있으면,
+  IF lv_halb_cost &gt; 0.
+     " 제품 (대변) 아이템 생성
+      call function <a href ="../zca_fi_post_docu/zca_fi_post_docu.html">'ZCA_FI_POST_DOCU'</a>
+        EXPORTING
+          iv_bukrs  = '1001'                      " 회사코드
+          iv_gjahr  = gs_sdt100-lfdat+0(4)        " 회계연도
+          iv_belnr  = gs_fit040-belnr             " 전표 번호
+          iv_bschl  = 12                          " 전기키
+          iv_saknr  = '1200060000'                " G/L 계정 : 반제품
+          iv_dmbtr  = lv_halb_cost               " 금액(KRW)
+          iv_waers  = lv_waers                    " 통화코드
+          iv_bpcode = gs_sdt100-cuscode          " BP 코드
+          iv_augdt = 'X'.                       " 반제 여부 : 생산 전표는 반제된 상태로 생성
+   ENDIF.
+
+   " 완제품 가격이 있으면,
+   IF lv_fert_cost &gt; 0.
+     call function <a href ="../zca_fi_post_docu/zca_fi_post_docu.html">'ZCA_FI_POST_DOCU'</a>
+        EXPORTING
+          iv_bukrs  = '1001'                    " 회사코드
+          iv_gjahr  = gs_sdt100-lfdat+0(4)     " 회계연도
+          iv_belnr  = gs_fit040-belnr          " 전표 번호
+          iv_bschl  = 12                       " 전기키
+          iv_saknr  = '1200050000'             " G/L 계정 : 완제품
+          iv_dmbtr  = lv_fert_cost            " 금액(KRW)
+          iv_waers  = lv_waers                 " 통화코드
+          iv_bpcode = gs_sdt100-cuscode       " BP 코드
+          iv_augdt = 'X'.                       " 반제 여부 : 생산 전표는 반제된 상태로 생성
+    ENDIF.
+
+  ev_belnr = gs_fit040-belnr. " 전표 번호
+
+ENDFUNCTION.
+
+
+<font color ="#0000FF">*Messages</font>
+<font color ="#0000FF">*----------------------------------------------------------</font>
+<font color ="#0000FF">*</font>
+<font color ="#0000FF">* Message class: Hard coded</font>
+<font color ="#0000FF">*   원자재는 판매할 수 없습니다. (E01)</font>
+</pre>
+<hr>
+<font size="2" face = "Sans Serif">Extracted by Direct Download Enterprise version 1.3.1 - E.G.Mellodew. 1998-2005 UK. Sap Release 758
+</font>
+</body>
+</html>

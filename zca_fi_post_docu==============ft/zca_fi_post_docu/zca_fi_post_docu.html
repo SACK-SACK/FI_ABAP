@@ -1,0 +1,194 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 3.2//EN">
+<html>
+<head>
+<title>ZCA_FI_POST_DOCU</title>
+</head>
+<body bgcolor="#FFFFE0">
+<font size="3" face = "Arial" color="#000000"><b>Code listing for function: ZCA_FI_POST_DOCU</b></font>
+<br>
+<font size="3" face = "Arial" color="#000000"><b>Description:  실제 전표 발행</b></font>
+<hr>
+<pre width="100">
+FUNCTION zca_fi_post_docu.
+<font color ="#0000FF">*"----------------------------------------------------------------------</font>
+<font color ="#0000FF">*"*"Local Interface:</font>
+<font color ="#0000FF">*"  IMPORTING</font>
+<font color ="#0000FF">*"     REFERENCE(IV_BUKRS) TYPE  ZCA_BUKRS DEFAULT '1001'</font>
+<font color ="#0000FF">*"     REFERENCE(IV_GJAHR) TYPE  ZCA_GJAHR</font>
+<font color ="#0000FF">*"     REFERENCE(IV_BELNR) TYPE  ZCA_BELNR OPTIONAL</font>
+<font color ="#0000FF">*"     REFERENCE(IV_BLART) TYPE  ZCA_BLART OPTIONAL</font>
+<font color ="#0000FF">*"     REFERENCE(IV_BLDAT) TYPE  ZCA_BLDAT OPTIONAL</font>
+<font color ="#0000FF">*"     REFERENCE(IV_BUDAT) TYPE  ZCA_BUDAT OPTIONAL</font>
+<font color ="#0000FF">*"     REFERENCE(IV_BLTXT) TYPE  ZCA_BLTXT OPTIONAL</font>
+<font color ="#0000FF">*"     REFERENCE(IV_XBLNR) TYPE  ZCA_XBLNR OPTIONAL</font>
+<font color ="#0000FF">*"     REFERENCE(IV_BSCHL) TYPE  ZCA_BSCHL</font>
+<font color ="#0000FF">*"     REFERENCE(IV_SAKNR) TYPE  ZCA_SAKNR</font>
+<font color ="#0000FF">*"     REFERENCE(IV_DMBTR) TYPE  ZCA_DMBTR</font>
+<font color ="#0000FF">*"     REFERENCE(IV_WAERS) TYPE  ZCA_WAERS</font>
+<font color ="#0000FF">*"     REFERENCE(IV_BPCODE) TYPE  ZCA_BPCODE OPTIONAL</font>
+<font color ="#0000FF">*"     REFERENCE(IV_AUGDT) TYPE  ZCA_AUGDT OPTIONAL</font>
+<font color ="#0000FF">*"     REFERENCE(IV_AUGBL) TYPE  ZCA_AUGBL OPTIONAL</font>
+<font color ="#0000FF">*"  EXPORTING</font>
+<font color ="#0000FF">*"     REFERENCE(EV_BUKRS) TYPE  ZCA_BUKRS</font>
+<font color ="#0000FF">*"     REFERENCE(EV_BELNR) TYPE  ZCA_BELNR</font>
+<font color ="#0000FF">*"     REFERENCE(EV_GJAHR) TYPE  ZCA_GJAHR</font>
+<font color ="#0000FF">*"     REFERENCE(EV_ITNUM) TYPE  ZCA_ITNUM</font>
+<font color ="#0000FF">*"----------------------------------------------------------------------</font>
+
+<font color ="#0000FF">*       <a href ="global-zca_fi_post_docu.html">Global data declarations</a></font>
+
+<font color ="#0000FF">* 실제 전표 발행을 위한 함수 ( 헤더 1개+아이템 1개 생성 또는 원하는 헤더에 아이템 1개 생성 )</font>
+<font color ="#0000FF">* Case 1. 전표 번호(BELNR)가 같이 넘어오면 해당하는 전표 헤더에 전표 아이템을 1개 생성한다.</font>
+<font color ="#0000FF">* Case 2. 전표 번호(BELNR)가 비어있으면, 전표 헤더를 생성하고 생성한 헤더 밑에 전표 아이템을 1개 생성한다.</font>
+
+<font color ="#0000FF">*--------------------------------------------------------------------*</font>
+<font color ="#0000FF">* 변수</font>
+<font color ="#0000FF">*--------------------------------------------------------------------*</font>
+  " 전표 헤더
+  DATA : gs_fit040 TYPE zca_fit040.
+
+  " 전표 아이템
+  DATA : gs_fit050 TYPE zca_fit050,
+         gt_fit050 TYPE TABLE OF zca_fit050.
+
+<font color ="#0000FF">*--------------------------------------------------------------------*</font>
+<font color ="#0000FF">* 로직</font>
+<font color ="#0000FF">*--------------------------------------------------------------------*</font>
+<font color ="#0000FF">* 전표 번호 여부에 따른 로직 분리</font>
+
+  " 전표 번호 비어있으면 전표 헤더 새로 생성
+  IF iv_belnr IS INITIAL.
+    " 전표에 다음 번호를 가지고 온다.
+    DATA lv_number TYPE numc10.
+    CALL FUNCTION 'NUMBER_GET_NEXT'
+      EXPORTING
+        nr_range_nr = '01'                " Number range number
+        object      = 'ZCA_BELNR'                " Name of number range object
+        quantity    = '1'              " Number of numbers
+      IMPORTING
+        number      = lv_number                " free number
+      EXCEPTIONS
+        OTHERS      = 1.
+
+    CHECK sy-subrc EQ 0.
+
+    " 전표 헤더 내용 채우기
+    gs_fit040-bukrs       = iv_bukrs.
+    gs_fit040-belnr       = lv_number. " 전표 번호는 따로 위에서 구한 숫자
+    gs_fit040-gjahr       = iv_gjahr.
+    gs_fit040-blart       = iv_blart. " &lt;-- 여기 날짜
+    gs_fit040-bldat       = iv_bldat. " &lt;-- 여기 날짜
+    gs_fit040-budat       = iv_budat.
+    gs_fit040-bltxt       = iv_bltxt.
+    gs_fit040-xblnr       = iv_xblnr.
+    gs_fit040-ernam       = sy-uname.
+    gs_fit040-erdat       = sy-datum.
+    gs_fit040-erzet       = sy-uzeit.
+
+    INSERT zca_fit040 FROM gs_fit040. " 전표 헤더 추가 insert
+<font color ="#0000FF">*    COMMIT WORK.</font>
+
+  ELSE.
+    " 원래 있는 헤더에 추가하려면 헤더 정보를 select 로 가져온다.
+    SELECT SINGLE * FROM zca_fit040 INTO gs_fit040
+       WHERE  belnr = iv_belnr
+          AND bukrs = iv_bukrs
+          AND gjahr = iv_gjahr.
+
+    IF sy-subrc NE 0. " 찾지를 못한다면, 전표 번호는 정해져있지만 새롭게 생성해야 한다는 뜻.
+      " 임시 전표에서 &gt; 전기 할 때를 위해서 !!
+      gs_fit040-bukrs       = iv_bukrs.
+      gs_fit040-belnr       = iv_belnr.
+      gs_fit040-gjahr       = iv_gjahr.
+      gs_fit040-blart       = iv_blart. " &lt;-- 여기 날짜
+      gs_fit040-bldat       = iv_bldat. " &lt;-- 여기 날짜
+      gs_fit040-budat       = iv_budat.
+      gs_fit040-bltxt       = iv_bltxt.
+      gs_fit040-xblnr       = iv_xblnr.
+      gs_fit040-ernam       = sy-uname.
+      gs_fit040-erdat       = sy-datum.
+      gs_fit040-erzet       = sy-uzeit.
+
+      INSERT zca_fit040 FROM gs_fit040. " 전표 헤더 추가 insert
+<font color ="#0000FF">*      COMMIT WORK.</font>
+    ENDIF.
+  ENDIF.
+
+<font color ="#0000FF">*--------------------------------------------------------------------*</font>
+  " 여기서부터는 전표 아이템 생성 (아이템은 무조건 생성 -&gt; 1개)
+<font color ="#0000FF">*--------------------------------------------------------------------*</font>
+
+  DATA ls_item TYPE zca_fit050.
+  DATA last_item LIKE zca_fit050-itnum VALUE 0.
+
+  " 해당하는 임시 전표 헤더 = gs_fit060
+  " 그거랑 관련된 item들을 가지고 와서 gt_fit070에 넣는다.
+  SELECT * FROM zca_fit050
+     INTO TABLE gt_fit050
+     WHERE belnr = gs_fit040-belnr
+       AND bukrs = gs_fit040-bukrs
+       AND gjahr = gs_fit040-gjahr.
+
+  IF gt_fit050 IS NOT INITIAL.
+
+    " 내부에 아이템이 존재한다면 아이템의 가장 마지막 번호 구하기
+    LOOP AT gt_fit050 INTO ls_item.
+      IF ls_item-itnum &gt; last_item.
+        last_item = ls_item-itnum.
+      ENDIF.
+    ENDLOOP.
+
+  ENDIF.
+
+  gs_fit050-itnum = last_item + 1. " 아이템 번호
+
+  " 헤더에서 가져올 것들
+  gs_fit050-bukrs   = gs_fit040-bukrs.
+  gs_fit050-belnr   = gs_fit040-belnr.
+  gs_fit050-gjahr   = gs_fit040-gjahr.
+
+  " import 로 가져오는 것
+  gs_fit050-bschl   = iv_bschl.
+  gs_fit050-saknr   = iv_saknr.
+  gs_fit050-dmbtr   = iv_dmbtr.
+  gs_fit050-waers   = iv_waers.
+  gs_fit050-bpcode  = iv_bpcode.
+  gs_fit050-augdt   = iv_augdt.  " 반제 여부
+  gs_fit050-augbl   = iv_augbl.
+
+  " gltxt 설정
+  DATA: lv_spras TYPE spras,
+        lv_txt20 TYPE txt20.
+
+  lv_spras = '3'.  " 한글 텍스트 가져오기
+
+  SELECT SINGLE txt20 INTO lv_txt20
+    FROM zca_fit010t
+    WHERE saknr = gs_fit050-saknr
+      AND bukrs = gs_fit050-bukrs
+      AND spras = lv_spras.
+  gs_fit050-gltxt = lv_txt20.
+
+  INSERT zca_fit050 FROM gs_fit050. " 전표 헤더 추가 insert
+<font color ="#0000FF">*  COMMIT WORK.</font>
+
+  " exporting
+  ev_bukrs = gs_fit050-bukrs. " 회사코드
+  ev_belnr = gs_fit050-belnr. " 전표번호
+  ev_gjahr = gs_fit050-gjahr. " 회계연도
+  ev_itnum = gs_fit050-itnum. " 생성한 전표 아이템 번호
+
+ENDFUNCTION.
+
+
+<font color ="#0000FF">*Messages</font>
+<font color ="#0000FF">*----------------------------------------------------------</font>
+<font color ="#0000FF">*</font>
+<font color ="#0000FF">* Message class: Hard coded</font>
+<font color ="#0000FF">*   원자재는 판매할 수 없습니다. (E01)</font>
+</pre>
+<hr>
+<font size="2" face = "Sans Serif">Extracted by Direct Download Enterprise version 1.3.1 - E.G.Mellodew. 1998-2005 UK. Sap Release 758
+</font>
+</body>
+</html>

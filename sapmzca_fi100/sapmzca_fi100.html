@@ -1,0 +1,68 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 3.2//EN">
+<html>
+<head>
+<title>SAPMZCA_FI100</title>
+</head>
+<body bgcolor="#FFFFE0">
+<font size="3" face = "Arial" color="#000000"><b>Code listing for: SAPMZCA_FI100</b></font>
+<br>
+<font size="3" face = "Arial" color="#000000"><b>Description:  [FI] 전표 입력 프로그램(수기 입력)</b></font>
+<hr>
+<pre width="100">
+<font color ="#0000FF">*&---------------------------------------------------------------------*</font>
+<font color ="#0000FF">*& Module Pool      SAPMZCA_FI100</font>
+<font color ="#0000FF">*&---------------------------------------------------------------------*</font>
+<font color ="#0000FF">*& [FI] 전표 입력 프로그램(수기 입력)</font>
+<font color ="#0000FF">*&---------------------------------------------------------------------*</font>
+
+" include 명이 바껴야 함 module pool은 top 앞에 _ 를 쓰지 않는다
+include <a href ="mzca_fi100_top.html">mzca_fi100_top</a>.  " Global Data
+include <a href ="mzca_fi100_pbo.html">mzca_fi100_pbo</a>.  " PBO-Modules
+include <a href ="mzca_fi100_pai.html">mzca_fi100_pai</a>.  " PAI-Modules
+include <a href ="mzca_fi100_f01.html">mzca_fi100_f01</a>.  " FORM-Routines
+
+" 초기 한 번 실행
+
+LOAD-OF-PROGRAM.
+
+  " init
+  zca_fit040-bukrs = text-t01.
+  zca_fit040-gjahr = sy-datum+0(4).
+  zca_fit050-waers = text-t02.
+
+<font color ="#0000FF">*GUI Texts</font>
+<font color ="#0000FF">*----------------------------------------------------------</font>
+<font color ="#0000FF">* T0100 --&gt; [FI] 전표 수기 입력 프로그램</font>
+<font color ="#0000FF">* T0100 --&gt; [FI] 전표 수기 입력 프로그램</font>
+
+<font color ="#0000FF">*Text elements</font>
+<font color ="#0000FF">*----------------------------------------------------------</font>
+<font color ="#0000FF">* E01 차변/대변이 전기키와 다릅니다</font>
+<font color ="#0000FF">* T01 1001</font>
+<font color ="#0000FF">* T02 KRW</font>
+<font color ="#0000FF">* T03 대차합 0원</font>
+<font color ="#0000FF">* T04 대차 불일치</font>
+
+
+<font color ="#0000FF">*Messages</font>
+<font color ="#0000FF">*----------------------------------------------------------</font>
+<font color ="#0000FF">*</font>
+<font color ="#0000FF">* Message class: ZCA_MSG</font>
+<font color ="#0000FF">*400   전표유형을 입력하세요.</font>
+<font color ="#0000FF">*401   전표헤더텍스트를 입력하세요.</font>
+<font color ="#0000FF">*402   전기키를 입력하세요.</font>
+<font color ="#0000FF">*403   계정과목을 입력하세요.</font>
+<font color ="#0000FF">*404   금액을 입력하세요.</font>
+<font color ="#0000FF">*405   전표 입력이 취소되었습니다.</font>
+<font color ="#0000FF">*406   전표 헤더 &번이 저장되었습니다.</font>
+<font color ="#0000FF">*407   전표 번호 : &</font>
+<font color ="#0000FF">*408   전표 번호 생성 실패</font>
+<font color ="#0000FF">*409   전표 아이템 &번을 저장했습니다.</font>
+<font color ="#0000FF">*410   대차가 맞지 않아 전표를 추가할 수 없습니다.</font>
+<font color ="#0000FF">*411   전표 저장 완료되었습니다.</font>
+</pre>
+<hr>
+<font size="2" face = "Sans Serif">Extracted by Direct Download Enterprise version 1.3.1 - E.G.Mellodew. 1998-2005 UK. Sap Release 758
+</font>
+</body>
+</html>

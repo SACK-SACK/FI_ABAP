@@ -1,0 +1,137 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 3.2//EN">
+<html>
+<head>
+<title>ZCA_FI140_BDC</title>
+</head>
+<body bgcolor="#FFFFE0">
+<font size="3" face = "Arial" color="#000000"><b>Code listing for: ZCA_FI140_BDC</b></font>
+<br>
+<font size="3" face = "Arial" color="#000000"><b>Description:  SD <-> FI BDC</b></font>
+<hr>
+<pre width="100">
+<font color ="#0000FF">*&---------------------------------------------------------------------*</font>
+<font color ="#0000FF">*& Report ZCA_FI140_BDC</font>
+<font color ="#0000FF">*&---------------------------------------------------------------------*</font>
+<font color ="#0000FF">*&</font>
+<font color ="#0000FF">*&---------------------------------------------------------------------*</font>
+REPORT ZCA_FI140_BDC.
+
+<font color ="#0000FF">* 전역 변수</font>
+TYPES : gty_bdc TYPE bdcdata,   " BDC 입력을 위한 구조체
+        gty_msg TYPE bdcmsgcoll.    " BDC 실행 결과 메세지를 위한 구조체
+
+DATA : gt_bdc TYPE STANDARD TABLE OF gty_bdc,  " BDC 입력값 테이블
+       gs_bdc LIKE LINE OF gt_bdc,             " BDC 입력값 단일 행
+       gt_msg TYPE STANDARD TABLE OF gty_msg,  " 메시지 테이블
+       gs_msg LIKE LINE OF gt_msg.             " 메시지 단일 행
+
+DATA : gs_opt     TYPE ctu_params,                 " BDC 실행 옵션 구조체
+       gv_move    LIKE ctu_params-dismode VALUE 'N', " 실행 모드 기본값: 백그라운드
+       gv_message LIKE bapireturn-message.     " 메시지 텍스트 저장용
+
+PARAMETERS: pa_invno TYPE zca_sdt120-inv_no,   " 청구문서 번호
+            pa_gjahr TYPE zca_sdt120-gjahr.   " 회계연도
+
+
+<font color ="#0000FF">*&---------------start-of-selection----------------*</font>
+
+START-OF-SELECTION.
+
+  PERFORM bdc_run. " BDC 로직 실행
+
+END-OF-SELECTION.
+
+
+<font color ="#0000FF">*&---------------------------------------------------------------------*</font>
+<font color ="#0000FF">*& Form bdc_run</font>
+<font color ="#0000FF">*&---------------------------------------------------------------------*</font>
+<font color ="#0000FF">*&---------------------------------------------------------------------*</font>
+FORM bdc_run .
+  DATA : lv_index TYPE sy-tabix. " 메시지 테이블에서 마지막 인덱스 확인용
+
+  " 내부 테이블 및 옵션 초기화
+  CLEAR: gt_bdc, gt_bdc[],
+         gs_opt,
+         gt_msg, gt_msg[],
+         gs_msg.
+
+  " 옵션 세팅
+  gs_opt-dismode = 'N'.     " 어떤 화면도 표시하지 않고 백그라운드 처리
+  gs_opt-updmode = 'A'.     " 비동기 업데이트
+  gs_opt-defsize = 'X'.     " 기본 창 사이즈 사용
+
+  " BDC 입력 구성 -&gt; 내용은 GT_BDC로 Append 하게 해놓았다.
+  PERFORM bdc_data USING:
+    " 새로운 스크린 시작(X) / 프로그램 이름 / 화면 번호
+    " () 비어있음         / 필드 이름    / 필드 값
+
+    " 첫 번째 화면
+    'X' 'ZCA_FI140' '1000',                     " 첫 화면 프로그램과 화면번호
+    ' ' 'BDC_CURSOR' 'PA_INVNO',
+    ' ' 'PA_INVNO' pa_invno,
+    ' ' 'PA_GJAHR' pa_gjahr,
+    ' ' 'BDC_OKCODE' '=ONLI'.
+
+  " 트랜잭션 실행 -&gt; BDC 내용과 옵션들과 함께 호출
+  CALL TRANSACTION 'ZCAFI140' USING gt_bdc
+    OPTIONS FROM gs_opt
+    MESSAGES INTO gt_msg.
+
+  IF sy-subrc EQ 0.
+    MESSAGE |청구 전표가 생성되었습니다.| TYPE 'S'.
+    COMMIT WORK.  " &lt;- 이걸 해줘야 DB 반영
+  ENDIF.
+
+    " 결과 메시지 확인
+  CLEAR lv_index.
+  DESCRIBE TABLE gt_msg LINES lv_index.
+  READ TABLE gt_msg INTO gs_msg INDEX lv_index.
+  CHECK sy-subrc EQ 0.
+
+    " 메시지 텍스트 변환
+  CALL FUNCTION 'MESSAGE_TEXT_BUILD'
+    EXPORTING
+      msgid               = gs_msg-msgid
+      msgnr               = gs_msg-msgnr
+      msgv1               = gs_msg-msgv1
+      msgv2               = gs_msg-msgv2
+      msgv3               = gs_msg-msgv3
+      msgv4               = gs_msg-msgv4
+    IMPORTING
+      message_text_output = gv_message.
+
+
+ENDFORM.
+<font color ="#0000FF">*&---------------------------------------------------------------------*</font>
+<font color ="#0000FF">*& Form bdc_data</font>
+<font color ="#0000FF">*&---------------------------------------------------------------------*</font>
+FORM bdc_data  USING    pv_check pv_name pv_value.
+  CLEAR gs_bdc.
+
+  IF pv_check = 'X'.
+    " 새로운 스크린 시작
+    gs_bdc-program = pv_name.     " 프로그램 이름
+    gs_bdc-dynpro  = pv_value.    " 화면 번호
+    gs_bdc-dynbegin = pv_check.   " 'X'로 시작 스크린임을 표시
+  ELSE.
+    " 입력 필드 성정 (새로운 스크린이 아닐 때)
+    gs_bdc-fnam = pv_name.        " 필드 이름
+    gs_bdc-fval = pv_value.       " 필드 값
+  ENDIF.
+
+    APPEND gs_bdc TO gt_bdc.        " BDCDATA 테이블에 추가
+
+ENDFORM.
+
+
+<font color ="#0000FF">*Messages</font>
+<font color ="#0000FF">*----------------------------------------------------------</font>
+<font color ="#0000FF">*</font>
+<font color ="#0000FF">* Message class: Hard coded</font>
+<font color ="#0000FF">*   청구 전표가 생성되었습니다.</font>
+</pre>
+<hr>
+<font size="2" face = "Sans Serif">Extracted by Direct Download Enterprise version 1.3.1 - E.G.Mellodew. 1998-2005 UK. Sap Release 758
+</font>
+</body>
+</html>

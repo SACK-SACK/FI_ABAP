@@ -1,0 +1,110 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 3.2//EN">
+<html>
+<head>
+<title>ZCA_FI110_PAI</title>
+</head>
+<body bgcolor="#FFFFE0">
+<font size="3" face = "Arial" color="#000000"><b>Code listing for: ZCA_FI110_PAI</b></font>
+<br>
+<font size="3" face = "Arial" color="#000000"><b>Description:  Include ZCA_FI110_PAI</b></font>
+<hr>
+<pre width="100">
+<font color ="#0000FF">*&---------------------------------------------------------------------*</font>
+<font color ="#0000FF">*& Include          ZCA_FI110_PAI</font>
+<font color ="#0000FF">*&---------------------------------------------------------------------*</font>
+
+<font color ="#0000FF">*&---------------------------------------------------------------------*</font>
+<font color ="#0000FF">*&      Module  EXIT  INPUT</font>
+<font color ="#0000FF">*&---------------------------------------------------------------------*</font>
+MODULE exit INPUT.
+
+  CASE ok_code.
+    WHEN 'CANC'.
+      LEAVE TO SCREEN 0.
+
+    WHEN 'EXIT'.
+      LEAVE PROGRAM.
+  ENDCASE.
+
+ENDMODULE.
+
+<font color ="#0000FF">*&---------------------------------------------------------------------*</font>
+<font color ="#0000FF">*&      Module  USER_COMMAND_0100  INPUT</font>
+<font color ="#0000FF">*&---------------------------------------------------------------------*</font>
+MODULE user_command_0100 INPUT.
+
+  CASE ok_code.
+    WHEN 'BACK'.
+      LEAVE TO SCREEN 0.
+
+    WHEN 'FC1' OR 'FC2' OR 'FC3'.
+      my_tabstrip-activetab = ok_code. " Next Screen(다음화면)에 내가 지금 누른 버튼(탭)이 눌리도록 activetab 으로 설정하고,
+      " 이 activetab의 값에 의해 보여질 화면번호가 결정
+      REFRESH gt_items.
+      CASE ok_code.
+        WHEN 'FC1'.
+          IF go_grid_0110 IS BOUND.
+            CALL METHOD go_grid_0110-&gt;set_filter_criteria
+              EXPORTING
+                it_filter = VALUE lvc_t_filt( ).
+            CALL METHOD go_grid_0110-&gt;refresh_table_display( ).
+          ENDIF.
+
+        WHEN 'FC2'.
+          IF go_grid_0120 IS BOUND.
+            CALL METHOD go_grid_0120-&gt;set_filter_criteria
+              EXPORTING
+                it_filter = VALUE lvc_t_filt( ).
+            CALL METHOD go_grid_0120-&gt;refresh_table_display( ).
+            CLEAR screen0120.
+          ENDIF.
+
+        WHEN 'FC3'.
+          IF go_grid_0170 IS BOUND.
+            CALL METHOD go_grid_0170-&gt;set_filter_criteria
+              EXPORTING
+                it_filter = VALUE lvc_t_filt( ).
+            CALL METHOD go_grid_0170-&gt;refresh_table_display( ).
+          ENDIF.
+      ENDCASE.
+
+  ENDCASE.
+ENDMODULE.
+<font color ="#0000FF">*&---------------------------------------------------------------------*</font>
+<font color ="#0000FF">*&      Module  USER_COMMAND_0130  INPUT</font>
+<font color ="#0000FF">*&---------------------------------------------------------------------*</font>
+MODULE user_command_0130 INPUT.
+
+  CASE ok_code.
+    WHEN 'PC2' OR 'PC3'.
+      pop_tabstrip-activetab = ok_code.
+
+    WHEN 'RADIO'.
+      CASE 'X'.
+        WHEN screen0130-cash. gv_payment = 'C'.
+        WHEN screen0130-deposit. gv_payment = 'D'.
+      ENDCASE.
+
+    WHEN 'CONT' . " 지급처리
+      " 메시지 팝업 보여주기
+      " 지급 처리 하기
+      " 고객원장 반제 처리
+      " 관련 아이템들 반제 처리
+
+      IF gv_payment = 'D' AND screen0130-bank IS INITIAL.
+        MESSAGE I462 DISPLAY LIKE 'E'. " 계좌를 반드시 선택해주세요.
+        RETURN. " 실행 중단
+      ELSE.
+        PERFORM make_payment_docu.
+
+      ENDIF.
+
+  ENDCASE.
+
+ENDMODULE.
+</pre>
+<hr>
+<font size="2" face = "Sans Serif">Extracted by Direct Download Enterprise version 1.3.1 - E.G.Mellodew. 1998-2005 UK. Sap Release 758
+</font>
+</body>
+</html>

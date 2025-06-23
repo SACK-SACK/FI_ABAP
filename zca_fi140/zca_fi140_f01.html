@@ -1,0 +1,231 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 3.2//EN">
+<html>
+<head>
+<title>ZCA_FI140_F01</title>
+</head>
+<body bgcolor="#FFFFE0">
+<font size="3" face = "Arial" color="#000000"><b>Code listing for: ZCA_FI140_F01</b></font>
+<br>
+<font size="3" face = "Arial" color="#000000"><b>Description:  F01</b></font>
+<hr>
+<pre width="100">
+<font color ="#0000FF">*&---------------------------------------------------------------------*</font>
+<font color ="#0000FF">*& Include          ZCA_FI140_F01</font>
+<font color ="#0000FF">*&---------------------------------------------------------------------*</font>
+
+<font color ="#0000FF">*&---------------------------------------------------------------------*</font>
+<font color ="#0000FF">*& Form select_data</font>
+<font color ="#0000FF">*&---------------------------------------------------------------------*</font>
+FORM select_data.
+
+  " 청구 문서 Header =&gt; WA에 저장
+  SELECT SINGLE  *
+                 FROM zca_sdt120
+                 INTO CORRESPONDING FIELDS OF gs_sdt120
+                 WHERE inv_no EQ pa_invno
+                   AND gjahr EQ pa_gjahr.
+
+  " 청구 문서 Item
+  SELECT *
+         FROM zca_sdt130 INTO CORRESPONDING FIELDS OF TABLE gt_sdt130
+         WHERE inv_no EQ pa_invno.
+
+
+ " 가격 마스터 :제품 매출 원가를 가지고오기 위함
+  SELECT * FROM zca_sdt030
+           INTO CORRESPONDING FIELDS OF TABLE gt_sdt030
+           WHERE matnr EQ zca_sdt130-matnr.
+
+ " 전표 헤더 Select
+ SELECT SINGLE * FROM zca_fit040
+          INTO gs_fit040
+          WHERE XBLNR EQ pa_invno
+            AND GJAHR EQ pa_gjahr. " 참조문서 번호가 같은 것
+
+ " 전표 아이템 Select
+ SELECT * FROM zca_fit050
+          INTO TABLE gt_fit050
+          WHERE BUKRS EQ gs_fit040-bukrs
+            AND BELNR EQ gs_fit040-belnr
+            AND GJAHR EQ gs_fit040-gjahr.
+
+
+ENDFORM.
+<font color ="#0000FF">*&---------------------------------------------------------------------*</font>
+<font color ="#0000FF">*& Form display_data</font>
+<font color ="#0000FF">*&---------------------------------------------------------------------*</font>
+FORM display_data .
+
+  CALL SCREEN 0100.
+
+ENDFORM.
+<font color ="#0000FF">*&---------------------------------------------------------------------*</font>
+<font color ="#0000FF">*& Form create_object_0100</font>
+<font color ="#0000FF">*&---------------------------------------------------------------------*</font>
+FORM create_object_0100 .
+
+  CREATE OBJECT go_container
+    EXPORTING
+      container_name = 'CCON'.   " 화면에 내가 만든 CCON Area의 이름
+
+  CREATE OBJECT go_alv_grid
+    EXPORTING
+      i_parent = go_container.   " Parent Container
+
+ENDFORM.
+<font color ="#0000FF">*&---------------------------------------------------------------------*</font>
+<font color ="#0000FF">*& Form set_alv_layout_0100</font>
+<font color ="#0000FF">*&---------------------------------------------------------------------*</font>
+FORM set_alv_layout_0100 .
+
+  CLEAR gs_layout.
+  CLEAR gs_variant.
+
+  gs_layout-sel_mode = 'D'. " 복수행 선택 + 행 선택 칼럼 생성 + ANY 셀 선택 가능
+  gs_layout-zebra = abap_on. " 얼룩모드
+  gs_layout-cwidth_opt = abap_on. " 열 넓이 최적화
+
+<font color ="#0000FF">* Variant 관련</font>
+  gs_variant-report    = sy-cprog. " 저장 가능하도록 설정
+  gs_save              = 'A'.      " 모두 저장 가능 모드
+
+ENDFORM.
+<font color ="#0000FF">*&---------------------------------------------------------------------*</font>
+<font color ="#0000FF">*& Form set_alv_field_cat_0100</font>
+<font color ="#0000FF">*&---------------------------------------------------------------------*</font>
+FORM set_alv_field_cat_0100 .
+
+  REFRESH gt_field_cat.
+  CLEAR gs_field_cat.
+  gs_field_cat-fieldname = 'KEY_TEXT'.
+  gs_field_cat-coltext = '전기키 설명'.
+  APPEND gs_field_cat TO gt_field_cat.
+
+<font color ="#0000FF">* 차변, 대변 추가</font>
+  CLEAR gs_field_cat.
+  gs_field_cat-fieldname = 'DEBIT'.
+  gs_field_cat-coltext    = '차변'.
+  gs_field_cat-cfieldname  = 'WAERS'.
+  APPEND gs_field_cat TO gt_field_cat.
+
+  CLEAR gs_field_cat.
+  gs_field_cat-fieldname = 'CREDIT'.
+  gs_field_cat-coltext    = '대변'.
+  gs_field_cat-cfieldname  = 'WAERS'.
+  APPEND gs_field_cat TO gt_field_cat.
+
+  CLEAR gs_field_cat.
+  gs_field_cat-fieldname = 'BPCODE'. " bp
+  gs_field_cat-hotspot = 'X'.
+  APPEND gs_field_cat TO gt_field_cat.
+
+
+  REFRESH gt_field_cat_b.
+  CLEAR gs_field_cat_b.
+  gs_field_cat_b-fieldname = 'ICON'.
+  gs_field_cat_b-col_pos = 1.
+  gs_field_cat_b-coltext = '반제여부'.
+  gs_field_cat_b-icon = abap_on.
+  APPEND gs_field_cat_b TO gt_field_cat_b.
+
+
+
+
+
+ENDFORM.
+<font color ="#0000FF">*&---------------------------------------------------------------------*</font>
+<font color ="#0000FF">*& Form set_alv_table_for_display_0100</font>
+<font color ="#0000FF">*&---------------------------------------------------------------------*</font>
+FORM set_alv_table_for_display_0100 .
+
+  CALL METHOD go_alv_grid-&gt;set_table_for_first_display
+    EXPORTING
+      i_structure_name = 'ZCA_FIT050'    " Internal Output Table Structure Name
+      is_variant       = gs_variant       " Layout
+      i_save           = gs_save          " Save Layout
+      is_layout        = gs_layout        " Layout
+    CHANGING
+      it_outtab        = gt_fit050       " Output Table
+      it_fieldcatalog  = gt_field_cat.     " Field Catalog
+<font color ="#0000FF">*     it_sort          =                  " Sort Criteria</font>
+<font color ="#0000FF">*     it_filter        =                  " Filter Criteria</font>
+
+ENDFORM.
+<font color ="#0000FF">*&---------------------------------------------------------------------*</font>
+<font color ="#0000FF">*& Form create_document</font>
+<font color ="#0000FF">*&---------------------------------------------------------------------*</font>
+FORM create_document .
+
+  " 전표[DA] 생성 : 외상 매출금 | 제품매출, 부가세
+  " 외상매출금 : 청구기준금액(원금) + 부가가치세
+  gv_money = gs_sdt120-BILAMT + gs_sdt120-taxamount.
+  DATA lv_itnum TYPE zca_itnum. " 아이템 번호를 받을 변수
+
+  " 헤더 하나 생성 + 외상매출금(차변) 아이템 생성
+  call function <a href ="zca_fi_post_docu/zca_fi_post_docu.html">'ZCA_FI_POST_DOCU'</a>
+    EXPORTING
+      iv_bukrs  = '1001'                    " 회사코드
+      iv_gjahr  = gs_sdt120-gjahr           " 회계연도lv_header
+      iv_blart  = 'DA'                      " 전표유형(이미 있는 헤더를 사용할 땐 X)
+      iv_bldat  = gs_sdt120-fkdat           " 증빙일자(이미 있는 헤더를 사용할 땐 X)
+      iv_budat  = gs_sdt120-budat           " 전기일자(이미 있는 헤더를 사용할 땐 X)
+      iv_bltxt  = '고객 매출 전표'          " 전표 헤더 텍스트(이미 있는 헤더를 사용할 땐 X)
+      iv_xblnr  = gs_sdt120-inv_no          " 참조문서(이미 있는 헤더를 사용할 땐 X)
+      iv_bschl  = 11                        " 전기키 : 고객 차변
+      iv_saknr  = '1100040000'              " G/L 계정 : 외상 매출금
+      iv_dmbtr  = gv_money                  " 금액(KRW) : 외상매출금 = 청구기준금액(원금) + 부가가치세
+      iv_waers  = gs_sdt120-waers           " 통화코드
+      iv_bpcode = gs_sdt120-cuscode         " BP 코드
+    IMPORTING
+      ev_bukrs  = gs_fit040-bukrs           " 회사코드
+      ev_belnr  = gs_fit040-belnr           " 전표번호
+      ev_gjahr  = gs_fit040-gjahr           " 회계연도
+      ev_itnum  = lv_itnum.                 " 아이템 번호를 받아옴 (원장에 넣을 때 사용하기 위함)
+
+  " 부가세 예수금 (대변) 아이템 생성
+  call function <a href ="zca_fi_post_docu/zca_fi_post_docu.html">'ZCA_FI_POST_DOCU'</a>
+    EXPORTING
+      iv_bukrs  = '1001'                   " 회사코드
+      iv_gjahr  = gs_sdt120-gjahr          " 회계연도
+      iv_belnr  = gs_fit040-belnr          " 전표 번호
+      iv_bschl  = 12                       " 전기키 : 고객 대변
+      iv_saknr  = '2100070000'             " G/L 계정 : 부가세 예수금
+      iv_dmbtr  = gs_sdt120-taxamount      " 금액(KRW) : 부가세
+      iv_waers  = gs_sdt120-waers          " 통화코드
+      iv_bpcode = gs_sdt120-cuscode.       " BP 코드
+
+  " 제품매출 (대변) 아이템 생성
+  call function <a href ="zca_fi_post_docu/zca_fi_post_docu.html">'ZCA_FI_POST_DOCU'</a>
+    EXPORTING
+      iv_bukrs  = '1001'                 " 회사코드
+      iv_gjahr  = gs_sdt120-gjahr        " 회계연도
+      iv_belnr  = gs_fit040-belnr        " 전표 번호
+      iv_bschl  = 12                     " 전기키 : 고객 대변
+      iv_saknr  = '4100010000'           " G/L 계정 : 제품 매출
+      iv_dmbtr  = gs_sdt120-bilamt       " 금액(KRW) : 청구기준금액(원금)
+      iv_waers  = gs_sdt120-waers        " 통화코드
+      iv_bpcode = gs_sdt120-cuscode.     " BP 코드
+
+  " 보조 원장에 넘기기
+  call function <a href ="zca_fi_post_recon_cust/zca_fi_post_recon_cust.html">'ZCA_FI_POST_RECON_CUST'</a>
+    EXPORTING
+      i_bukrs =   gs_fit040-bukrs      " 회사코드
+      i_belnr =   gs_fit040-belnr      " 전표번호
+      i_gjahr =   gs_fit040-gjahr      " 회계연도
+      i_itnum =   lv_itnum.            " 아이템번호 : 외상 매출금 계정만 넘김
+
+ENDFORM.
+<font color ="#0000FF">*&---------------------------------------------------------------------*</font>
+<font color ="#0000FF">*& Form set_handler</font>
+<font color ="#0000FF">*&---------------------------------------------------------------------*</font>
+FORM set_handler .
+
+  SET HANDLER lcl_event_event_handler=&gt;on_hotspot_click FOR go_alv_grid.
+
+ENDFORM.
+</pre>
+<hr>
+<font size="2" face = "Sans Serif">Extracted by Direct Download Enterprise version 1.3.1 - E.G.Mellodew. 1998-2005 UK. Sap Release 758
+</font>
+</body>
+</html>

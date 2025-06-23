@@ -1,0 +1,215 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 3.2//EN">
+<html>
+<head>
+<title>ZCA_FI110_TOP</title>
+</head>
+<body bgcolor="#FFFFE0">
+<font size="3" face = "Arial" color="#000000"><b>Code listing for: ZCA_FI110_TOP</b></font>
+<br>
+<font size="3" face = "Arial" color="#000000"><b>Description:  Include ZCA_FI110_TOP</b></font>
+<hr>
+<pre width="100">
+<font color ="#0000FF">*&---------------------------------------------------------------------*</font>
+<font color ="#0000FF">*& Include          ZCA_FI110_TOP</font>
+<font color ="#0000FF">*&---------------------------------------------------------------------*</font>
+
+<font color ="#0000FF">* 미결 부분을 위한 타입</font>
+TYPES : BEGIN OF ty_vendor.
+          include structure <a href ="zca_fit100/dictionary-zca_fit100.html">zca_fit100</a>.
+TYPES :
+<font color ="#0000FF">*          row_color   TYPE c LENGTH 4,       " &lt;== 행 색상을 취급하기 위한 필드</font>
+          light       TYPE c LENGTH 1,           " &lt;== Exception Column / 지급 조건에 대한 exception column
+          due_date    LIKE zca_fit100-bldat,     " &lt;== 지급 마감 날짜
+          cell_colors TYPE lvc_t_scol,        " &lt;== 셀 색상 취급 필드 , ITAB 구조
+          gltxt       TYPE zca_gltxt,               " 계정명
+          bstxt       TYPE zca_bstxt,               " 전기키명
+          descr       TYPE zca_descr,               " 전표유형
+        END OF ty_vendor.
+
+<font color ="#0000FF">* 반제 부분을 위한 타입</font>
+TYPES : BEGIN OF ty_clear.
+          include structure <a href ="zca_fit100/dictionary-zca_fit100.html">zca_fit100</a>.
+TYPES :
+<font color ="#0000FF">*          row_color   TYPE c LENGTH 4,       " &lt;== 행 색상을 취급하기 위한 필드</font>
+<font color ="#0000FF">*          cell_colors TYPE lvc_t_scol,        " &lt;== 셀 색상 취급 필드 , ITAB 구조</font>
+          gltxt TYPE zca_gltxt,               " 계정명
+          bstxt TYPE zca_bstxt,               " 전기키명
+          descr TYPE zca_descr,               " 전표유형
+        END OF ty_clear.
+
+DATA : gs_fit100 TYPE zca_fit100,
+       gt_fit100 TYPE TABLE OF zca_fit100.
+
+<font color ="#0000FF">* 미결건</font>
+DATA : gt_open TYPE TABLE OF ty_vendor,
+       gs_open TYPE ty_vendor.
+DATA : gt_selected TYPE TABLE OF ty_vendor,
+       gs_selected TYPE ty_vendor.
+
+<font color ="#0000FF">* 반제건</font>
+DATA : gt_clearing TYPE TABLE OF ty_clear,
+       gs_clearing TYPE ty_clear.
+
+<font color ="#0000FF">* 새로고침 flag</font>
+DATA gv_refresh.
+
+<font color ="#0000FF">*--------------------------------------------------------------------*</font>
+<font color ="#0000FF">* ALV</font>
+<font color ="#0000FF">*--------------------------------------------------------------------*</font>
+DATA go_con_0110 TYPE REF TO cl_gui_custom_container.
+DATA go_con_0120 TYPE REF TO cl_gui_custom_container.
+DATA go_con_0120_i TYPE REF TO cl_gui_custom_container.
+DATA go_con_0130 TYPE REF TO cl_gui_custom_container.
+DATA go_con_0170 TYPE REF TO cl_gui_custom_container.
+
+DATA go_grid_0110 TYPE REF TO cl_gui_alv_grid.
+DATA go_grid_0120 TYPE REF TO cl_gui_alv_grid.
+DATA go_grid_0120_i TYPE REF TO cl_gui_alv_grid.
+DATA go_grid_0130 TYPE REF TO cl_gui_alv_grid.
+DATA go_grid_0170 TYPE REF TO cl_gui_alv_grid.
+
+DATA gs_layout_0110 TYPE lvc_s_layo.
+DATA gs_layout_0120 TYPE lvc_s_layo.
+DATA gs_layout_0120_i TYPE lvc_s_layo.
+DATA gs_layout_0130 TYPE lvc_s_layo.
+DATA gs_layout_0170 TYPE lvc_s_layo.
+
+DATA gs_variant_0110 TYPE disvariant.
+DATA gs_variant_0120 TYPE disvariant.
+DATA gs_variant_0120_i TYPE disvariant.
+DATA gs_variant_0130 TYPE disvariant.
+DATA gs_variant_0170 TYPE disvariant.
+
+DATA gv_save_0110.
+DATA gv_save_0120.
+DATA gv_save_0120_i.
+DATA gv_save_0130.
+DATA gv_save_0170.
+
+<font color ="#0000FF">* ALV Field Catalog</font>
+DATA gt_field_cat_0110 TYPE lvc_t_fcat.
+DATA gt_field_cat_0120 TYPE lvc_t_fcat.
+DATA gt_field_cat_0120_i TYPE lvc_t_fcat.
+DATA gt_field_cat_0130 TYPE lvc_t_fcat.
+DATA gt_field_cat_0170 TYPE lvc_t_fcat.
+
+DATA gs_field_cat TYPE lvc_s_fcat.
+
+<font color ="#0000FF">*--------------------------------------------------------------------*</font>
+<font color ="#0000FF">* Screen 0100.</font>
+<font color ="#0000FF">*--------------------------------------------------------------------*</font>
+DATA ok_code TYPE sy-ucomm.
+DATA : BEGIN OF screen0100,
+         open_num    TYPE int4,
+         clear_num   TYPE int4,
+         open_price  TYPE zca_dmbtr,
+         clear_price TYPE zca_dmbtr,
+         open_cuky   TYPE zca_wears,
+         clear_cuky  TYPE zca_wears,
+       END OF screen0100.
+
+<font color ="#0000FF">*--------------------------------------------------------------------*</font>
+<font color ="#0000FF">* Screen 0110.</font>
+<font color ="#0000FF">*--------------------------------------------------------------------*</font>
+DATA : BEGIN OF screen0110,
+         red_num      TYPE int4,
+         yellow_num   TYPE int4,
+         green_num    TYPE int4,
+         total_num    TYPE int4,
+         red_price    TYPE zca_dmbtr,
+         yellow_price TYPE zca_dmbtr,
+         green_price  TYPE zca_dmbtr,
+         total_price  TYPE zca_dmbtr,
+         red_cuky     TYPE zca_wears,
+         yellow_cuky  TYPE zca_wears,
+         green_cuky   TYPE zca_wears,
+         total_cuky   TYPE zca_wears,
+       END OF screen0110.
+
+<font color ="#0000FF">*--------------------------------------------------------------------*</font>
+<font color ="#0000FF">* Screen 0120.</font>
+<font color ="#0000FF">*--------------------------------------------------------------------*</font>
+DATA : BEGIN OF gs_items.
+         include structure <a href ="zca_fit050/dictionary-zca_fit050.html">zca_fit050</a>.
+DATA :   debit  LIKE zca_fit050-dmbtr,
+         credit LIKE zca_fit050-dmbtr,
+       END OF gs_items.
+
+<font color ="#0000FF">* 구체적인 전표 아이템 조회</font>
+DATA : gt_items LIKE TABLE OF gs_items.
+
+DATA : BEGIN OF screen0120,
+         vencode TYPE zca_vencode,
+         venname TYPE zca_venname,
+         price   TYPE zca_dmbtr,
+         cuky    TYPE zca_waers,
+         payment TYPE c LENGTH 10,
+       END OF screen0120.
+
+<font color ="#0000FF">*--------------------------------------------------------------------*</font>
+<font color ="#0000FF">* Screen 0130.</font>
+<font color ="#0000FF">*--------------------------------------------------------------------*</font>
+DATA : BEGIN OF screen0130,
+         cash        TYPE char1 VALUE 'X',
+         deposit     TYPE char1,
+         bank        TYPE char30,
+         total_price TYPE zca_dmbtr VALUE 0,
+         total_cuky  TYPE zca_waers,
+       END OF screen0130.
+DATA: gt_values TYPE vrm_values.
+DATA gv_payment TYPE c VALUE 'C'. " 1 = cash / 2 = deposit(보통예금)
+DATA gv_bpcode TYPE zca_bpcode.
+
+<font color ="#0000FF">*--------------------------------------------------------------------*</font>
+<font color ="#0000FF">* Tabstrip</font>
+<font color ="#0000FF">*--------------------------------------------------------------------*</font>
+<font color ="#0000FF">* Subscreen 의 번호를 담당할 변수</font>
+DATA dynnr TYPE sy-dynnr. " 화면번호는 문자 4자리
+DATA dynnr_pop TYPE sy-dynnr. " 화면번호는 문자 4자리
+
+<font color ="#0000FF">* Tabstrip을 제어하기 위한 변수</font>
+CONTROLS my_tabstrip TYPE TABSTRIP.
+CONTROLS pop_tabstrip TYPE TABSTRIP.
+
+<font color ="#0000FF">*--------------------------------------------------------------------*</font>
+<font color ="#0000FF">* Screen 0140 ~ 160</font>
+<font color ="#0000FF">*--------------------------------------------------------------------*</font>
+TABLES : zca_rbkp, zca_lfa1, zca_fit080.
+
+DATA : cuky1 LIKE zca_rbkp-waers VALUE 'KRW',
+       cuky2 LIKE zca_rbkp-waers VALUE 'KRW'.
+
+DATA : BEGIN OF screen0160,
+         zltxt TYPE zca_zltxt,
+       END OF screen0160.
+
+TYPES : BEGIN OF ty_popup.
+          include structure <a href ="zca_fit050/dictionary-zca_fit050.html">zca_fit050</a>.
+TYPES :   debit  TYPE zca_dmbtr,
+          credit TYPE zca_dmbtr,
+          bstxt  TYPE zca_bstxt,               " 전기키명
+        END OF ty_popup.
+
+DATA : gs_popup_data TYPE ty_popup,
+       gt_popup_data TYPE TABLE OF ty_popup.
+
+<font color ="#0000FF">*--------------------------------------------------------------------*</font>
+<font color ="#0000FF">* screen 0170</font>
+<font color ="#0000FF">*--------------------------------------------------------------------*</font>
+DATA: go_con_tree TYPE REF TO cl_gui_custom_container,
+      go_tree     TYPE REF TO cl_gui_simple_tree,
+      gs_node     TYPE mtreesnode,
+      gt_nodes    TYPE table of mtreesnode.
+TYPES: node_table_type  LIKE STANDARD TABLE OF mtreesnode WITH DEFAULT KEY.
+
+DATA gt_ven TYPE TABLE OF zca_lfa1.
+DATA gs_ven TYPE zca_lfa1.
+
+DATA gt_0170_display TYPE TABLE of ty_clear.
+DATA gs_0170_display TYPE ty_clear.
+</pre>
+<hr>
+<font size="2" face = "Sans Serif">Extracted by Direct Download Enterprise version 1.3.1 - E.G.Mellodew. 1998-2005 UK. Sap Release 758
+</font>
+</body>
+</html>

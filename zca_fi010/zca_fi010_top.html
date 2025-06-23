@@ -1,0 +1,187 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 3.2//EN">
+<html>
+<head>
+<title>ZCA_FI010_TOP</title>
+</head>
+<body bgcolor="#FFFFE0">
+<font size="3" face = "Arial" color="#000000"><b>Code listing for: ZCA_FI010_TOP</b></font>
+<br>
+<font size="3" face = "Arial" color="#000000"><b>Description:  Include ZCA_FI010_TOP</b></font>
+<hr>
+<pre width="100">
+<font color ="#0000FF">*&---------------------------------------------------------------------*</font>
+<font color ="#0000FF">*& Include          ZCA_FI010_TOP</font>
+<font color ="#0000FF">*&---------------------------------------------------------------------*</font>
+
+TABLES sscrfields.
+
+DATA gv_flag TYPE c VALUE ''. " '' = 시산표 / X = 결산
+
+TYPES: BEGIN OF ty_combined.
+         include structure <a href ="zca_fit050/dictionary-zca_fit050.html">zca_fit050</a>.
+TYPES:   pyear         TYPE zca_date-pyear,
+         pmonth        TYPE zca_date-pmonth,
+         pweek         TYPE zca_date-pweek,
+         bstxt         TYPE zca_bstxt,
+         debit         TYPE zca_dmbtr,
+         credit        TYPE zca_dmbtr,
+         category      TYPE string, " 자산 / 부채 / 자본 / 수익 / 비용 분류용
+         category_sort TYPE i, "    " category 정렬용 숫자
+         is_open       TYPE abap_bool, " 미결 여부 추가
+       END OF ty_combined,
+       ty_combined_tab TYPE STANDARD TABLE OF ty_combined WITH EMPTY KEY.
+
+" 시산표용 테이블
+DATA : BEGIN OF gs_trial.
+         include structure <a href ="zca_trial_balance/dictionary-zca_trial_balance.html">zca_trial_balance</a>.
+DATA :   cell_colors TYPE lvc_t_scol,
+       END OF gs_trial.
+DATA: gt_trial LIKE TABLE OF gs_trial.
+DATA gt_temp_items TYPE ty_combined_tab.
+
+" 시산표 출력용 테이블
+DATA : gt_trial_print TYPE zca_fiy011,
+       gs_trial_print TYPE zca_trial_smartform.
+
+" 최종 차변과 대변 잔액의 합
+DATA : gv_balance_debit_sum  TYPE zca_dmbtr,
+       gv_balance_credit_sum TYPE zca_dmbtr.
+
+" 각 아이템을 위한 mapping 타입 ! &gt; 더블클릭 이벤트 때문에 사용
+TYPES: BEGIN OF ty_node_map,
+         node_key TYPE lvc_nkey,
+         bukrs    TYPE zca_bukrs,
+         gjahr    TYPE zca_gjahr,
+         belnr    TYPE zca_belnr,
+       END OF ty_node_map,
+       ty_node_map_tab TYPE STANDARD TABLE OF ty_node_map WITH EMPTY KEY.
+DATA: gt_node_map TYPE ty_node_map_tab,
+      gs_node_map TYPE ty_node_map.
+
+" 결산할 때 현재 행 정보가 필요해서 선언한 매핑
+TYPES: BEGIN OF ty_period_map,
+         node_key TYPE lvc_nkey,        " 주차 노드의 키
+         pyear    TYPE zca_date-pyear,  " 연도
+         pmonth   TYPE zca_date-pmonth, " 월
+         pweek    TYPE zca_date-pweek,  " 주차
+       END OF ty_period_map,
+       ty_period_map_tab TYPE STANDARD TABLE OF ty_period_map WITH EMPTY KEY.
+DATA: gt_period_map TYPE ty_period_map_tab.
+
+" category 별 매핑타입
+TYPES: BEGIN OF ty_cat_map,
+         pyear    TYPE zca_date-pyear,
+         pmonth   TYPE zca_date-pmonth,
+         pweek    TYPE zca_date-pweek,
+         category TYPE string,
+         node_key TYPE lvc_nkey,
+       END OF ty_cat_map.
+
+DATA: gt_cat_map TYPE STANDARD TABLE OF ty_cat_map WITH EMPTY KEY.
+
+DATA : gs_result TYPE ty_combined,
+       gt_result TYPE TABLE OF ty_combined,
+       gt_node   TYPE TABLE OF ty_combined.
+
+" 전표 헤더 / 전표 아이템
+DATA : gt_header    TYPE TABLE OF zca_fit040,
+       gs_header    TYPE zca_fit040,
+       gt_items     TYPE TABLE OF ty_combined,
+       gs_items     TYPE ty_combined,
+       gt_all_items TYPE TABLE OF zca_fit050.
+
+<font color ="#0000FF">*--------------------------------------------------------------------*</font>
+<font color ="#0000FF">* Screen 0100.</font>
+<font color ="#0000FF">*--------------------------------------------------------------------*</font>
+DATA ok_code TYPE sy-ucomm.
+
+TABLES : zca_fit050, zca_date.  " 전표 아이템 / date
+
+DATA : gt_date_range TYPE TABLE OF zca_date.
+
+DATA: gv_today_year  TYPE zca_date-pyear,
+      gv_today_month TYPE zca_date-pmonth,
+      gv_today_week  TYPE zca_date-pweek.
+DATA gv_today_week_key TYPE lvc_nkey.
+
+<font color ="#0000FF">*--------------------------------------------------------------------*</font>
+<font color ="#0000FF">* Screen 0120.</font>
+<font color ="#0000FF">*--------------------------------------------------------------------*</font>
+DATA : BEGIN OF s0120,
+         year        TYPE zca_date-pyear,
+         month       TYPE  zca_date-pmonth,
+         week        TYPE zca_date-pweek,
+         status_icon TYPE char30 VALUE icon_led_red,
+         status_text TYPE char30 VALUE '차/대변 불일치',
+       END OF s0120.
+
+<font color ="#0000FF">*--------------------------------------------------------------------*</font>
+<font color ="#0000FF">* Screen 0130.</font>
+<font color ="#0000FF">*--------------------------------------------------------------------*</font>
+TABLES : zca_fit110.
+
+<font color ="#0000FF">*--- 상세 전표 띄울 거</font>
+TYPES: BEGIN OF ty_gl_detail,
+         " 주차 기준
+         pyear       TYPE zca_pyear,
+         pmonth      TYPE zca_pmonth,
+         pweek       TYPE zca_pweek,
+         budat       TYPE zca_budat, " 전기 일자
+         belnr       TYPE zca_belnr, " 전표 번호
+         debit       TYPE zca_dmbtr, " 차변 금액
+         credit      TYPE zca_dmbtr, " 대변 금액
+         balance     TYPE zca_dmbtr, " 잔액
+         waers       TYPE zca_waers, " 통화코드
+         cell_colors TYPE lvc_t_scol,       " &lt;== 셀 색상 취급 필드 , ITAB 구조
+
+       END OF ty_gl_detail.
+
+TYPES: ty_t_gl_detail TYPE STANDARD TABLE OF ty_gl_detail WITH EMPTY KEY.
+
+DATA: gt_gl_detail TYPE ty_t_gl_detail,
+      gs_gl_detail TYPE ty_gl_detail.
+DATA : BEGIN OF s0130,
+          total type zca_dmbtr,
+          cuky  type zca_waers,
+       END OF s0130.
+
+<font color ="#0000FF">*--------------------------------------------------------------------*</font>
+<font color ="#0000FF">* ALV Tree</font>
+<font color ="#0000FF">*--------------------------------------------------------------------*</font>
+DATA: go_alv_tree              TYPE REF TO cl_gui_alv_tree,
+      go_custom_container      TYPE REF TO cl_gui_custom_container,
+      go_custom_container_0130 TYPE REF TO cl_gui_custom_container,
+      go_toolbar               TYPE REF TO cl_gui_toolbar.
+
+DATA : gt_field_cat TYPE lvc_t_fcat,
+       gs_field_cat TYPE lvc_s_fcat.
+
+DATA: gt_layout_item TYPE lvc_t_layi,
+      gs_layout_item TYPE lvc_s_layi,
+      gs_layout_node TYPE lvc_s_layn.
+
+" 팝업 alv
+DATA go_cont_popup TYPE REF TO cl_gui_custom_container.
+DATA go_alv_popup TYPE REF TO cl_gui_alv_grid.
+DATA go_alv_0130 TYPE REF TO cl_gui_alv_grid.
+
+DATA gs_layout_p TYPE lvc_s_layo.
+DATA gs_variant_p TYPE disvariant.
+DATA gv_save_p.
+
+DATA gs_layout_0130 TYPE lvc_s_layo.
+DATA gs_variant_0130 TYPE disvariant.
+DATA gv_save_0130.
+
+<font color ="#0000FF">* ALV Field Catalog</font>
+DATA gt_field_cat_p TYPE lvc_t_fcat.
+DATA gs_field_cat_p TYPE lvc_s_fcat.
+
+DATA gt_field_cat_0130 TYPE lvc_t_fcat.
+DATA gs_field_cat_0130 TYPE lvc_s_fcat.
+</pre>
+<hr>
+<font size="2" face = "Sans Serif">Extracted by Direct Download Enterprise version 1.3.1 - E.G.Mellodew. 1998-2005 UK. Sap Release 758
+</font>
+</body>
+</html>

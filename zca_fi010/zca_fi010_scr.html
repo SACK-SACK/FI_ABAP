@@ -1,0 +1,30 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 3.2//EN">
+<html>
+<head>
+<title>ZCA_FI010_SCR</title>
+</head>
+<body bgcolor="#FFFFE0">
+<font size="3" face = "Arial" color="#000000"><b>Code listing for: ZCA_FI010_SCR</b></font>
+<br>
+<font size="3" face = "Arial" color="#000000"><b>Description:  Include ZCA_FI010_SCR</b></font>
+<hr>
+<pre width="100">
+<font color ="#0000FF">*&---------------------------------------------------------------------*</font>
+<font color ="#0000FF">*& Include          ZCA_FI010_SCR</font>
+<font color ="#0000FF">*&---------------------------------------------------------------------*</font>
+
+
+  SELECTION-SCREEN BEGIN OF BLOCK b1 WITH FRAME TITLE TEXT-001. " 결산 검색 조건
+
+    SELECT-OPTIONS so_bukrs FOR gs_header-bukrs NO INTERVALS NO-EXTENSION DEFAULT '1001'.
+    SELECT-OPTIONS so_year FOR zca_date-pyear NO INTERVALS NO-EXTENSION DEFAULT '2025'.
+    SELECT-OPTIONS so_month FOR zca_date-pmonth .
+    SELECT-OPTIONS so_week FOR zca_date-pweek .
+
+  SELECTION-SCREEN END OF BLOCK b1.
+</pre>
+<hr>
+<font size="2" face = "Sans Serif">Extracted by Direct Download Enterprise version 1.3.1 - E.G.Mellodew. 1998-2005 UK. Sap Release 758
+</font>
+</body>
+</html>

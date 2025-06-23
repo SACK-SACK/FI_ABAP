@@ -1,0 +1,376 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 3.2//EN">
+<html>
+<head>
+<title>ZCA_FI030_CLS</title>
+</head>
+<body bgcolor="#FFFFE0">
+<font size="3" face = "Arial" color="#000000"><b>Code listing for: ZCA_FI030_CLS</b></font>
+<br>
+<font size="3" face = "Arial" color="#000000"><b>Description:  CLS</b></font>
+<hr>
+<pre width="100">
+<font color ="#0000FF">*&---------------------------------------------------------------------*</font>
+<font color ="#0000FF">*& Include          ZCA_FI030_CLS</font>
+<font color ="#0000FF">*&---------------------------------------------------------------------*</font>
+CLASS lcl_event_handler DEFINITION.
+
+  PUBLIC SECTION .
+<font color ="#0000FF">*-- Static Method</font>
+    CLASS-METHODS :
+
+      " ALV에서 발생한 핫스팟 이벤트를 위한 메소드
+      on_hotspot_click
+        FOR EVENT hotspot_click OF cl_gui_alv_grid
+        IMPORTING e_row_id
+                  e_column_id
+                  sender,  " sender : 이벤트 발신자 객체 지정 역할
+
+      " ALV의 툴바에 버튼을 다루는 이벤트
+      on_toolbar
+        FOR EVENT toolbar OF cl_gui_alv_grid
+        IMPORTING e_object
+                  sender,
+
+      " 버튼을 클릭했을 때 작동하는 이벤트
+      on_user_command
+        FOR EVENT user_command OF cl_gui_alv_grid
+        IMPORTING e_ucomm.
+
+
+ENDCLASS.
+
+
+<font color ="#0000FF">*&---------------------------------------------------------------------*</font>
+<font color ="#0000FF">*& Class (Implementation) lcl_event_handler</font>
+<font color ="#0000FF">*&---------------------------------------------------------------------*</font>
+CLASS lcl_event_handler IMPLEMENTATION.
+
+
+  METHOD on_hotspot_click.
+
+    CASE sender.  " 이벤트가 발생한 ALV 객체 구분
+
+      WHEN go_alv_grid_0100.
+
+        " e_row_id-rowtype이 값이 있는 경우는 내가 ALV에 전달한 데이터가 아닌 특수항 행
+        IF e_row_id-rowtype IS NOT INITIAL .
+          MESSAGE '일반 데이터행만 클릭해주세요' TYPE 'I'.
+          RETURN.
+        ENDIF.
+
+       " 선택된 ALV 행의 전표 아이템 데이터를 읽음
+        CLEAR gs_fit070.
+        READ TABLE gt_fit070 INTO gs_fit070 INDEX e_row_id-index.
+
+
+        CASE e_column_id-fieldname.
+          WHEN 'BPCODE'.
+
+        " BP 상세 정보 팝업 호출
+         call function <a href ="zca_fi_bp_popup_small/zca_fi_bp_popup_small.html">'ZCA_FI_BP_POPUP_SMALL'</a>
+           EXPORTING
+             iv_bpcode = gs_fit070-bpcode.  " 선택된 행의 BP 코드 값을 전달
+        ENDCASE.
+
+      WHEN go_alv_grid_0110.
+
+        " e_row_id-rowtype이 값이 있는 경우는 내가 ALV에 전달한 데이터가 아닌 특수항 행
+        IF e_row_id-rowtype IS NOT INITIAL .
+          MESSAGE '일반 데이터행만 클릭해주세요' TYPE 'I'.
+          RETURN.
+        ENDIF.
+
+        CLEAR gs_before.
+        " 승인 요청 전 데이터를 검색해서 WA에 넣어둠
+        READ TABLE gt_before INTO gs_before INDEX e_row_id-index.
+
+        IF sy-subrc NE 0.
+          MESSAGE '선택한 데이터를 찾을 수 없습니다.' TYPE 'I' DISPLAY LIKE 'W'.
+          RETURN .
+        ENDIF.
+
+        DATA lv_BELNR TYPE zca_fit060-belnr. " 전표번호에 대한 지역 변수 선언
+        lv_belnr = gs_before-belnr.          " 선택된 행의 전표 번호 넣어주기
+
+        CASE e_column_id-fieldname.
+          WHEN 'BELNR'. " 전표 번호 누르면 -&gt; 전표 아이템 아래에 보이도록 한다.
+            " 누른 행의 값을 가지고 gt_fit070 만들기
+            REFRESH gt_fit070.
+            PERFORM make_gt_fit070 USING lv_belnr.
+
+          WHEN 'XBLNR'. " 참고문서(XBLNR) 필드
+            DATA lv_type TYPE c.
+            IF gs_before-xblnr+0(2) EQ 'IV'.        " 참조문서 앞 2글자가 IV일 때
+              lv_type = 'B'.                        " 송장
+            ELSEIF gs_before-xblnr+0(3) EQ 'INV'.   " 참조문서 앞 3글자가 INV일 때
+              lv_type = 'C'.                        " 청구서
+            ELSEIF gs_before-xblnr+0(3) EQ 'OUT'.   " 참조문서 앞 2글자가 OUT일 때
+              lv_type = 'D'.                        " 출고 문서
+            ELSEIF gs_before-xblnr+0(2) EQ 'PO'..   " 참조문서 앞 2글자가 PO일 때
+              lv_type = 'E'.                        " 생산오더 전표
+            ELSE.
+              lv_type = 'A'.                        " 일반전표
+            ENDIF.
+
+            " 참조 문서 유형에 따라 팝업 호출
+            call function <a href ="zca_fi_xblnr/zca_fi_xblnr.html">'ZCA_FI_XBLNR'</a>
+              EXPORTING
+                iv_type   = lv_type                  " 전표('A')/송장('B')/청구서('C')/출고문서('D')
+                iv_belnr  = gs_before-xblnr          " 전표번호(type이 A일때)
+                iv_invnr  = gs_before-xblnr          " 송장번호(type이 B일때)
+                iv_inv_no = gs_before-xblnr          " 청구서번호(type이 C일때)
+                iv_outnum = gs_before-xblnr         " 출고문서 번호 (type이 D일때)
+                iv_aufnr = gs_before-xblnr.            " 생산오더 번호
+
+        ENDCASE.
+
+      WHEN go_alv_grid_0120.
+
+        " e_row_id-rowtype이 값이 있는 경우는 내가 ALV에 전달한 데이터가 아닌 특수항 행
+        IF e_row_id-rowtype IS NOT INITIAL .
+          MESSAGE '일반 데이터행만 클릭해주세요' TYPE 'I'.
+          RETURN.
+        ENDIF.
+
+        CLEAR gs_after.
+        READ TABLE gt_after INTO gs_after INDEX e_row_id-index.
+
+        IF sy-subrc NE 0.
+          MESSAGE '선택한 데이터를 찾을 수 없습니다.' TYPE 'I' DISPLAY LIKE 'W'.
+          RETURN .
+        ENDIF.
+
+<font color ="#0000FF">*         DATA lv_BELNR TYPE zca_fit060-belnr. " 전표번호에 대한 지역 변수 선언</font>
+        lv_belnr = gs_after-belnr.          " 선택된 행의 전표 번호 넣어주기
+
+        CASE e_column_id-fieldname.
+          WHEN 'BELNR'. " 전표 번호 누르면 -&gt; 전표 아이템 아래에 보이도록 한다.
+            " 누른 행의 값을 가지고 gt_fit070 만들기
+            REFRESH gt_fit070.
+            PERFORM make_gt_fit070 USING lv_belnr.
+
+          WHEN 'XBLNR'. " 참고문서(XBLNR) 필드
+            IF gs_after-xblnr+0(2) EQ 'IV'.        " 참조문서 앞 2글자가 IV일 때
+              lv_type = 'B'.                        " 송장
+            ELSEIF gs_after-xblnr+0(3) EQ 'INV'.   " 참조문서 앞 3글자가 INV일 때
+              lv_type = 'C'.                        " 청구서
+            ELSEIF gs_after-xblnr+0(3) EQ 'OUT'.   " 참조문서 앞 2글자가 OUT일 때
+              lv_type = 'D'.                        " 출고 문서
+            ELSEIF gs_after-xblnr+0(2) EQ 'PO'.   " 참조문서 앞 2글자가 PO일 때
+              lv_type = 'E'.                        " 생산오더 전표
+            ELSE.
+              lv_type = 'A'.                        " 일반전표
+            ENDIF.
+
+            " 참조 문서 유형에 따라 팝업 호출
+            call function <a href ="zca_fi_xblnr/zca_fi_xblnr.html">'ZCA_FI_XBLNR'</a>
+              EXPORTING
+                iv_type   = lv_type                  " 전표('A')/송장('B')/청구서('C')/출고문서('D')
+                iv_belnr  = gs_after-xblnr          " 전표번호(type이 A일때)
+                iv_invnr  = gs_after-xblnr          " 송장번호(type이 B일때)
+                iv_inv_no = gs_after-xblnr          " 청구서번호(type이 C일때)
+                iv_outnum = gs_after-xblnr         " 출고문서 번호 (type이 D일때)
+                iv_aufnr = gs_after-xblnr.            " 생산오더 번호
+
+        ENDCASE.
+    ENDCASE.
+
+  ENDMETHOD.
+
+  METHOD on_toolbar.
+
+    CASE sender.
+      WHEN go_alv_grid_0110.
+
+        DATA ls_button LIKE LINE OF e_object-&gt;mt_toolbar.
+
+        CLEAR ls_button.
+        ls_button-butn_type = 3.    " 3 = 구분자
+        APPEND ls_button TO e_object-&gt;mt_toolbar.
+
+        CLEAR ls_button.
+        ls_button-function = 'APPROVAL'.
+        ls_button-icon     = icon_create_text.
+        ls_button-text     = '승인 요청'.
+        APPEND ls_button TO e_object-&gt;mt_toolbar.
+
+<font color ="#0000FF">*     CLEAR ls_button.</font>
+<font color ="#0000FF">*     ls_button-function = 'DOCU'.</font>
+<font color ="#0000FF">*     ls_button-icon     = icon_action_success.</font>
+<font color ="#0000FF">*     ls_button-text     = '전표 임시 생성'.</font>
+<font color ="#0000FF">*     APPEND ls_button TO e_object-&gt;mt_toolbar.</font>
+      WHEN go_alv_grid_0120.
+
+        CLEAR ls_button.
+        ls_button-butn_type = 3.    " 3 = 구분자
+        APPEND ls_button TO e_object-&gt;mt_toolbar.
+
+        CLEAR ls_button.
+        ls_button-function = 'SANGSIN'.
+        ls_button-icon     = icon_led_yellow.
+        ls_button-text     = '상신건'.
+        APPEND ls_button TO e_object-&gt;mt_toolbar.
+
+        CLEAR ls_button.
+        ls_button-function = 'ACCEPT'.
+        ls_button-icon     =  icon_led_green.
+        ls_button-text     = '승인건'.
+        APPEND ls_button TO e_object-&gt;mt_toolbar.
+
+        CLEAR ls_button.
+        ls_button-function = 'DENY'.
+        ls_button-icon     = icon_led_red.
+        ls_button-text     = '반려건'.
+        APPEND ls_button TO e_object-&gt;mt_toolbar.
+
+    ENDCASE.
+
+  ENDMETHOD.
+
+  METHOD on_user_command.
+
+    CASE e_ucomm.
+        " 승인처리
+      WHEN 'APPROVAL'.
+        PERFORM make_approval.
+
+
+        "상신건
+      WHEN 'SANGSIN'.
+
+        SELECT * FROM zca_fit060
+                 INTO TABLE gt_after
+                 WHERE appstatus EQ 'S'.
+
+        " 전표 유형 설명 텍스트 보완 (ZCA_FIT030에서 descr 조회)
+        LOOP AT gt_after INTO gs_fit060.
+
+          " 전표유형 테이블의 텍스트를 가져와서 넣어줌.
+          SELECT SINGLE descr INTO @gs_fit060-descr
+                 FROM zca_fit030
+                 WHERE blart = @gs_fit060-blart.
+          MODIFY gt_after FROM gs_fit060.
+
+          CASE gs_fit060-appstatus.
+            WHEN 'N'. " 신규
+              gs_fit060-icon = icon_led_inactive.
+            WHEN 'A'. " 승인
+              gs_fit060-icon = icon_led_green.
+            WHEN 'S'. " 상신
+              gs_fit060-icon = icon_led_yellow.
+            WHEN 'R'. " 반려
+              gs_fit060-icon = icon_led_red.
+          ENDCASE.
+
+          MODIFY gt_after FROM gs_fit060.
+
+        ENDLOOP.
+
+        MESSAGE s451. " 상신처리된 전표만 조회합니다.
+
+        CLEAR gt_fit070. " 아이템도 Clear
+        CLEAR screen0100. " 스크린도 Clear
+
+        LEAVE SCREEN.
+
+        " ALV 데이터 다시 출력
+        CALL METHOD go_alv_grid_0120-&gt;refresh_table_display( ).
+        CALL METHOD go_alv_grid_0100-&gt;refresh_table_display( ).
+
+
+     " 승인건
+      WHEN 'ACCEPT'.
+
+        SELECT * FROM zca_fit060
+                  INTO TABLE gt_after
+                  WHERE appstatus EQ 'A'.
+        " 전표 유형 설명 텍스트 보완 (ZCA_FIT030에서 descr 조회)
+        LOOP AT gt_after INTO gs_fit060.
+
+          " 전표유형 테이블의 텍스트를 가져와서 넣어줌.
+          SELECT SINGLE descr INTO @gs_fit060-descr
+                 FROM zca_fit030
+                 WHERE blart = @gs_fit060-blart.
+          MODIFY gt_after FROM gs_fit060.
+
+          CASE gs_fit060-appstatus.
+            WHEN 'N'. " 신규
+              gs_fit060-icon = icon_led_inactive.
+            WHEN 'A'. " 승인
+              gs_fit060-icon = icon_led_green.
+            WHEN 'S'. " 상신
+              gs_fit060-icon = icon_led_yellow.
+            WHEN 'R'. " 반려
+              gs_fit060-icon = icon_led_red.
+          ENDCASE.
+
+          MODIFY gt_after FROM gs_fit060.
+
+        ENDLOOP.
+
+        MESSAGE s452. " 승인된 전표만 조회합니다.
+
+        CLEAR gt_fit070. " 아이템도 Clear
+        CLEAR screen0100. " 스크린도 Clear
+
+        LEAVE SCREEN.
+
+        " ALV 데이터 다시 출력
+        CALL METHOD go_alv_grid_0120-&gt;refresh_table_display( ).
+        CALL METHOD go_alv_grid_0100-&gt;refresh_table_display( ).
+
+        " 반려건
+      WHEN  'DENY'.
+
+         SELECT * FROM zca_fit060
+                  INTO TABLE gt_after
+                  WHERE appstatus EQ 'R'.
+
+        " 전표 유형 설명 텍스트 보완 (ZCA_FIT030에서 descr 조회)
+        LOOP AT gt_after INTO gs_fit060.
+
+          " 전표유형 테이블의 텍스트를 가져와서 넣어줌.
+          SELECT SINGLE descr INTO @gs_fit060-descr
+                 FROM zca_fit030
+                 WHERE blart = @gs_fit060-blart.
+          MODIFY gt_after FROM gs_fit060.
+
+          CASE gs_fit060-appstatus.
+            WHEN 'N'. " 신규
+              gs_fit060-icon = icon_led_inactive.
+            WHEN 'A'. " 승인
+              gs_fit060-icon = icon_led_green.
+            WHEN 'S'. " 상신
+              gs_fit060-icon = icon_led_yellow.
+            WHEN 'R'. " 반려
+              gs_fit060-icon = icon_led_red.
+          ENDCASE.
+
+          MODIFY gt_after FROM gs_fit060.
+
+        ENDLOOP.
+
+        MESSAGE s453. " 반려된 전표만 조회합니다.
+
+        CLEAR gt_fit070. " 아이템도 Clear
+        CLEAR screen0100. " 스크린도 Clear
+
+        LEAVE SCREEN.
+
+        " ALV 데이터 다시 출력
+        CALL METHOD go_alv_grid_0120-&gt;refresh_table_display( ).
+        CALL METHOD go_alv_grid_0100-&gt;refresh_table_display( ).
+
+<font color ="#0000FF">*      WHEN 'DOCU'.</font>
+<font color ="#0000FF">*        PERFORM make_doc.</font>
+    ENDCASE.
+
+  ENDMETHOD.
+
+ENDCLASS.
+</pre>
+<hr>
+<font size="2" face = "Sans Serif">Extracted by Direct Download Enterprise version 1.3.1 - E.G.Mellodew. 1998-2005 UK. Sap Release 758
+</font>
+</body>
+</html>

@@ -1,0 +1,114 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 3.2//EN">
+<html>
+<head>
+<title>ZCA_FI080</title>
+</head>
+<body bgcolor="#FFFFE0">
+<font size="3" face = "Arial" color="#000000"><b>Code listing for: ZCA_FI080</b></font>
+<br>
+<font size="3" face = "Arial" color="#000000"><b>Description:  [FI] 재무상태표</b></font>
+<hr>
+<pre width="100">
+<font color ="#0000FF">*&---------------------------------------------------------------------*</font>
+<font color ="#0000FF">*& Report ZCA_FI080</font>
+<font color ="#0000FF">*&---------------------------------------------------------------------*</font>
+<font color ="#0000FF">*& [FI] 재무상태표 프로그램</font>
+<font color ="#0000FF">*&---------------------------------------------------------------------*</font>
+REPORT zca_fi080 MESSAGE-ID zca_msg.
+
+<font color ="#0000FF">*--------------------------------------------------------------------*</font>
+<font color ="#0000FF">* 선언부</font>
+<font color ="#0000FF">*--------------------------------------------------------------------*</font>
+include <a href ="zca_fi080_top.html">zca_fi080_top</a>.   " 전역변수, 타입, 상수 등 선언
+include <a href ="zca_fi080_scr.html">zca_fi080_scr</a>.   " Selection Screen
+include <a href ="zca_fi080_cls.html">zca_fi080_cls</a>.   " Local Class 정의 구현
+
+<font color ="#0000FF">*--------------------------------------------------------------------*</font>
+<font color ="#0000FF">* 구현부</font>
+<font color ="#0000FF">*--------------------------------------------------------------------*</font>
+include <a href ="zca_fi080_pbo.html">zca_fi080_pbo</a>.
+include <a href ="zca_fi080_pai.html">zca_fi080_pai</a>.
+include <a href ="zca_fi080_f01.html">zca_fi080_f01</a>.
+
+<font color ="#0000FF">*--------------------------------------------------------------------*</font>
+<font color ="#0000FF">* ABAP Event</font>
+<font color ="#0000FF">*--------------------------------------------------------------------*</font>
+INITIALIZATION.
+  REFRESH so_year[].
+  so_year-low = sy-datum+0(4).
+  APPEND so_year.
+
+AT SELECTION-SCREEN OUTPUT.
+  LOOP AT SCREEN.
+    IF screen-name = 'SO_YEAR-LOW'.
+      screen-input = 0. " 연도 입력창 비활성화
+      MODIFY SCREEN.
+    ENDIF.
+  ENDLOOP.
+
+AT SELECTION-SCREEN.
+  " 주차는 입력했는데 월이 비어있으면 오류
+  IF so_week[] IS NOT INITIAL AND so_month[] IS INITIAL.
+    MESSAGE e435. " 주차를 입력하려면 월도 입력해야 합니다.
+  ENDIF.
+
+  LOOP AT so_month.
+    IF so_month-low &lt; 1 OR so_month-low &gt; 12.
+      MESSAGE E454. " 월은 1에서 12 사이여야 합니다.
+    ENDIF.
+  ENDLOOP.
+
+  LOOP AT so_week.
+    IF so_week-low &lt; 1 OR so_week-low &gt; 5.
+      MESSAGE E455. " 주차는 1에서 5 사이여야 합니다.
+    ENDIF.
+  ENDLOOP.
+
+START-OF-SELECTION.
+  PERFORM select_data.
+  PERFORM calculate_data.
+  PERFORM make_node.
+  PERFORM add_folder_nodes.
+  CALL SCREEN 0100.
+
+<font color ="#0000FF">*GUI Texts</font>
+<font color ="#0000FF">*----------------------------------------------------------</font>
+<font color ="#0000FF">* T0100 --&gt; [FI] 재무상태표</font>
+
+<font color ="#0000FF">*Text elements</font>
+<font color ="#0000FF">*----------------------------------------------------------</font>
+<font color ="#0000FF">* 001 재무상태표 검색조건</font>
+<font color ="#0000FF">* A01 자산</font>
+<font color ="#0000FF">* A02 부채</font>
+<font color ="#0000FF">* A03 자본</font>
+<font color ="#0000FF">* B01 유동자산</font>
+<font color ="#0000FF">* B02 재고자산</font>
+<font color ="#0000FF">* B03 비유동자산</font>
+<font color ="#0000FF">* B04 당좌자산</font>
+<font color ="#0000FF">* B05 유동부채</font>
+<font color ="#0000FF">* B06 비유동부채</font>
+
+
+<font color ="#0000FF">*Selection texts</font>
+<font color ="#0000FF">*----------------------------------------------------------</font>
+<font color ="#0000FF">* SO_MONTH         월</font>
+<font color ="#0000FF">* SO_WEEK         주차</font>
+<font color ="#0000FF">* SO_YEAR         회계연도</font>
+
+
+<font color ="#0000FF">*Messages</font>
+<font color ="#0000FF">*----------------------------------------------------------</font>
+<font color ="#0000FF">*</font>
+<font color ="#0000FF">* Message class: ZCA_MSG</font>
+<font color ="#0000FF">*417   이벤트 등록 중 오류</font>
+<font color ="#0000FF">*428   일반 데이터행만 클릭해주세요.</font>
+<font color ="#0000FF">*429   선택한 데이터를 찾을 수 없습니다.</font>
+<font color ="#0000FF">*435   주차를 입력하려면 월도 입력해야 합니다.</font>
+<font color ="#0000FF">*454   월은 1에서 12 사이여야 합니다.</font>
+<font color ="#0000FF">*455   주차는 1에서 5 사이여야 합니다.</font>
+</pre>
+<hr>
+<font size="2" face = "Sans Serif">Extracted by Direct Download Enterprise version 1.3.1 - E.G.Mellodew. 1998-2005 UK. Sap Release 758
+</font>
+</body>
+</html>

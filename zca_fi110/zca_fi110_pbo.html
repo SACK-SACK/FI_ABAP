@@ -1,0 +1,325 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 3.2//EN">
+<html>
+<head>
+<title>ZCA_FI110_PBO</title>
+</head>
+<body bgcolor="#FFFFE0">
+<font size="3" face = "Arial" color="#000000"><b>Code listing for: ZCA_FI110_PBO</b></font>
+<br>
+<font size="3" face = "Arial" color="#000000"><b>Description:  Include ZCA_FI110_PBO</b></font>
+<hr>
+<pre width="100">
+<font color ="#0000FF">*&---------------------------------------------------------------------*</font>
+<font color ="#0000FF">*& Include          ZCA_FI110_PBO</font>
+<font color ="#0000FF">*&---------------------------------------------------------------------*</font>
+<font color ="#0000FF">*&---------------------------------------------------------------------*</font>
+<font color ="#0000FF">*& Module STATUS_0100 OUTPUT</font>
+<font color ="#0000FF">*&---------------------------------------------------------------------*</font>
+MODULE status_0100 OUTPUT.
+  SET PF-STATUS 'S0100'.
+  SET TITLEBAR 'T0100'.
+ENDMODULE.
+
+<font color ="#0000FF">*&---------------------------------------------------------------------*</font>
+<font color ="#0000FF">*& Module CLEAR_OK_CODE OUTPUT</font>
+<font color ="#0000FF">*&---------------------------------------------------------------------*</font>
+MODULE clear_ok_code OUTPUT.
+
+  CLEAR ok_code.
+
+ENDMODULE.
+
+<font color ="#0000FF">*&---------------------------------------------------------------------*</font>
+<font color ="#0000FF">*& Module FILL_DYNNR OUTPUT</font>
+<font color ="#0000FF">*&---------------------------------------------------------------------*</font>
+MODULE fill_dynnr OUTPUT.
+
+<font color ="#0000FF">* Tabstrip에서 현재 활성화되어 있는 탭에 해당하는 화면을 보여주기 위해 조건문 사용</font>
+  CASE my_tabstrip-activetab.
+
+    WHEN 'FC1'. " 첫번째 탭의 Function Code 는 FC1
+      dynnr = '0110'.
+
+    WHEN 'FC2'. " 두번째 탭의 Function Code 는 FC2
+      dynnr = '0120'.
+
+    WHEN 'FC3'.
+      dynnr = '0170'.
+
+    WHEN OTHERS . " 모두 해당되지 않으면 초기값 설정
+      dynnr = '0110'.                " 화면에 110번 서브스크린이 보이도록 한다.
+      my_tabstrip-activetab = 'FC1'. " 첫번째 탭을 활성화 탭으로 취급
+
+  ENDCASE.
+
+ENDMODULE.
+
+<font color ="#0000FF">*&---------------------------------------------------------------------*</font>
+<font color ="#0000FF">*& Module INIT_ALV_0110 OUTPUT</font>
+<font color ="#0000FF">*&---------------------------------------------------------------------*</font>
+MODULE init_alv_0110 OUTPUT.
+
+  IF go_con_0110 IS INITIAL.
+
+    " Container와 ALV 생성
+    PERFORM create_screen_obj USING go_con_0110
+                                    go_grid_0110
+                                    'CCON_110'.
+    " ALV Layout 설정
+    PERFORM set_alv_layout_0110.
+
+    " ALV Field Catalog 설정
+    PERFORM set_alv_fieldcat_0110.
+
+    " ALV Event Handler Method 등록
+    PERFORM set_alv_event_0110.
+
+    " 값 설정
+    PERFORM set_alv_table_for_display USING gt_open
+                                                 go_grid_0110
+                                                'ZCA_FIT100'
+                                                gs_layout_0110
+                                                gs_variant_0110
+                                                gv_save_0110
+                                                gt_field_cat_0110.
+  ELSE.
+
+    "refresh
+    go_grid_0110-&gt;refresh_table_display( ).
+
+  ENDIF.
+ENDMODULE.
+<font color ="#0000FF">*&---------------------------------------------------------------------*</font>
+<font color ="#0000FF">*& Module INIT_ALV_0120 OUTPUT</font>
+<font color ="#0000FF">*&---------------------------------------------------------------------*</font>
+MODULE init_alv_0120 OUTPUT.
+
+  IF go_con_0120 IS INITIAL.
+
+    PERFORM create_screen_obj USING go_con_0120
+                                    go_grid_0120
+                                    'CCON_120'.
+    PERFORM create_screen_obj USING go_con_0120_i
+                                    go_grid_0120_i
+                                    'CCON_120_ITEM'.
+
+    " ALV Layout 설정
+    PERFORM set_alv_layout_0120.
+    PERFORM set_alv_layout_0120_i.
+
+    " ALV Field Catalog 설정
+    PERFORM set_alv_fieldcat_0120.
+    PERFORM set_alv_fieldcat_0120_i.
+
+    " ALV Event Handler Method 등록
+    PERFORM set_alv_event_0120.
+    PERFORM set_alv_event_0120_i.
+
+    " 값 설정
+    PERFORM set_alv_table_for_display  USING gt_clearing
+                                             go_grid_0120
+                                             'ZCA_FIT100'
+                                             gs_layout_0120
+                                             gs_variant_0120
+                                             gv_save_0120
+                                             gt_field_cat_0120.
+
+    PERFORM set_alv_table_for_display USING gt_items
+                                         go_grid_0120_i
+                                         ''
+                                         gs_layout_0120_i
+                                         gs_variant_0120_i
+                                         gv_save_0120_i
+                                         gt_field_cat_0120_i.
+
+  ELSE.
+    go_grid_0120-&gt;refresh_table_display( ).
+    go_grid_0120_i-&gt;refresh_table_display( ).
+
+  ENDIF.
+
+ENDMODULE.
+<font color ="#0000FF">*&---------------------------------------------------------------------*</font>
+<font color ="#0000FF">*& Module STATUS_0130 OUTPUT</font>
+<font color ="#0000FF">*&---------------------------------------------------------------------*</font>
+MODULE status_0130 OUTPUT.
+  SET PF-STATUS  'S0130'.
+  SET TITLEBAR   'T0130'.
+
+  CLEAR screen0130-bank.
+  REFRESH gt_values.
+
+  " 우리 계좌 가져오기
+  DATA lt_accounts TYPE TABLE OF zca_fit080.
+  SELECT bankcode, bpbank, accnt
+    FROM zca_fit080
+    WHERE bpcode IS INITIAL
+      AND lvorm = ''
+    INTO CORRESPONDING FIELDS OF TABLE @lt_accounts.
+
+  DATA ls_value TYPE vrm_value.
+  LOOP AT lt_accounts INTO DATA(ls_account).
+    DATA(lv_key) = ls_account-bankcode.
+    CLEAR ls_value.
+    ls_value-key  = ls_account-bankcode.
+    ls_value-text = |{ ls_account-bpbank } - { ls_account-accnt }|.
+    APPEND ls_value-text TO gt_values.
+  ENDLOOP.
+
+  " 리스트박스에 값 바인딩
+  CALL FUNCTION 'VRM_SET_VALUES'
+    EXPORTING
+      id     = 'SCREEN0130-BANK'
+      values = gt_values.
+
+  LOOP AT SCREEN.
+    " 보통예금 선택했을 때만 계좌선택 영역 보이게
+    IF screen-group1 = 'DEP'.
+      IF gv_payment EQ 'D'.
+        screen-invisible = 0.
+        screen-active = 1.
+      ELSE.         " 현금 선택 시 숨김
+        screen-invisible = 1.
+        screen-active = 0.
+      ENDIF.
+      MODIFY SCREEN.
+    ENDIF.
+  ENDLOOP.
+<font color ="#0000FF">*  gv_payment = 'C'. " 초기화</font>
+
+ENDMODULE.
+<font color ="#0000FF">*&---------------------------------------------------------------------*</font>
+<font color ="#0000FF">*& Module FILL_DYNNR_POP OUTPUT</font>
+<font color ="#0000FF">*&---------------------------------------------------------------------*</font>
+MODULE fill_dynnr_pop OUTPUT.
+
+  CASE pop_tabstrip-activetab.
+
+    WHEN 'PC2'.
+      dynnr_pop = '0150'.
+
+    WHEN 'PC3'.
+      dynnr_pop = '0160'.
+
+    WHEN OTHERS . " 모두 해당되지 않으면 초기값 설정
+      dynnr_pop = '0150'.
+      pop_tabstrip-activetab = 'PC2'.
+
+  ENDCASE.
+
+ENDMODULE.
+<font color ="#0000FF">*&---------------------------------------------------------------------*</font>
+<font color ="#0000FF">*& Module GET_POPUP_DATA OUTPUT</font>
+<font color ="#0000FF">*&---------------------------------------------------------------------*</font>
+MODULE get_popup_data OUTPUT.
+
+  " 벤더 정보
+  SELECT SINGLE * FROM zca_lfa1
+    INTO CORRESPONDING FIELDS OF zca_lfa1
+    WHERE lifnr EQ gv_bpcode.
+
+  " 은행 정보
+  SELECT SINGLE * FROM zca_fit080
+    INTO CORRESPONDING FIELDS OF zca_fit080
+    WHERE bankcode EQ zca_lfa1-bankcode.
+
+  " 은행에서 전기키 정보
+  SELECT SINGLE zltxt FROM zca_tvzbr
+    INTO screen0160-zltxt WHERE zlsch EQ zca_fit080-zlsch.
+
+ENDMODULE.
+<font color ="#0000FF">*&---------------------------------------------------------------------*</font>
+<font color ="#0000FF">*& Module INIT_ALV_0130 OUTPUT</font>
+<font color ="#0000FF">*&---------------------------------------------------------------------*</font>
+MODULE init_alv_0130 OUTPUT.
+
+  IF go_con_0130 IS INITIAL.
+
+    " Container와 ALV 생성
+    PERFORM create_screen_obj USING go_con_0130
+                                    go_grid_0130
+                                    'CCON_POP'.
+
+    " ALV Layout 설정
+    PERFORM set_alv_layout_0130.
+
+    " ALV Field Catalog 설정
+    PERFORM set_alv_fieldcat_0130.
+
+    " ALV Event Handler Method 등록
+    PERFORM set_alv_event_0130.
+
+    " 값 설정
+    PERFORM set_alv_table_for_display USING gt_popup_data
+                                                go_grid_0130
+                                                'ZCA_FIT050'
+                                                gs_layout_0130
+                                                gs_variant_0130
+                                                gv_save_0130
+                                                gt_field_cat_0130.
+  ELSE.
+    "refresh
+    go_grid_0130-&gt;refresh_table_display( ).
+
+  ENDIF.
+
+ENDMODULE.
+<font color ="#0000FF">*&---------------------------------------------------------------------*</font>
+<font color ="#0000FF">*& Module GET_ALV_DATA OUTPUT</font>
+<font color ="#0000FF">*&---------------------------------------------------------------------*</font>
+MODULE get_alv_data OUTPUT.
+
+  PERFORM make_display_data.
+
+ENDMODULE.
+<font color ="#0000FF">*&---------------------------------------------------------------------*</font>
+<font color ="#0000FF">*& Module INIT_TREE OUTPUT</font>
+<font color ="#0000FF">*&---------------------------------------------------------------------*</font>
+MODULE init_tree OUTPUT.
+
+  IF go_con_tree IS INITIAL.
+    PERFORM create_tree.
+  ENDIF.
+
+ENDMODULE.
+<font color ="#0000FF">*&---------------------------------------------------------------------*</font>
+<font color ="#0000FF">*& Module INIT_ALV_0170 OUTPUT</font>
+<font color ="#0000FF">*&---------------------------------------------------------------------*</font>
+MODULE init_alv_0170 OUTPUT.
+
+  IF go_con_0170 IS INITIAL.
+
+    " Container와 ALV 생성
+    PERFORM create_screen_obj USING go_con_0170
+                                    go_grid_0170
+                                    'CCON_0170'.
+
+    " ALV Layout 설정
+    PERFORM set_alv_layout_0170.
+
+    " ALV Field Catalog 설정
+    PERFORM set_alv_fieldcat_0170.
+
+    " ALV Event Handler Method 등록
+    PERFORM set_alv_event_0170.
+
+    " 값 설정
+    PERFORM set_alv_table_for_display USING gt_0170_display
+                                                go_grid_0170
+                                                'ZCA_FIT100'
+                                                gs_layout_0170
+                                                gs_variant_0170
+                                                gv_save_0170
+                                                gt_field_cat_0170.
+  ELSE.
+    go_grid_0170-&gt;refresh_table_display( ).
+
+  ENDIF.
+
+ENDMODULE.
+</pre>
+<hr>
+<font size="2" face = "Sans Serif">Extracted by Direct Download Enterprise version 1.3.1 - E.G.Mellodew. 1998-2005 UK. Sap Release 758
+</font>
+</body>
+</html>

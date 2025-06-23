@@ -1,0 +1,115 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 3.2//EN">
+<html>
+<head>
+<title>ZCA_FI010_PAI</title>
+</head>
+<body bgcolor="#FFFFE0">
+<font size="3" face = "Arial" color="#000000"><b>Code listing for: ZCA_FI010_PAI</b></font>
+<br>
+<font size="3" face = "Arial" color="#000000"><b>Description:  Include ZCA_FI010_PAI</b></font>
+<hr>
+<pre width="100">
+<font color ="#0000FF">*&---------------------------------------------------------------------*</font>
+<font color ="#0000FF">*& Include          ZCA_FI010_PAI</font>
+<font color ="#0000FF">*&---------------------------------------------------------------------*</font>
+<font color ="#0000FF">*&---------------------------------------------------------------------*</font>
+<font color ="#0000FF">*&      Module  EXIT  INPUT</font>
+<font color ="#0000FF">*&---------------------------------------------------------------------*</font>
+MODULE exit INPUT.
+
+  CASE ok_code.
+    WHEN 'CANC'.
+      LEAVE TO SCREEN 0.
+
+    WHEN 'EXIT'.
+      LEAVE PROGRAM.
+  ENDCASE.
+
+ENDMODULE.
+
+<font color ="#0000FF">*&---------------------------------------------------------------------*</font>
+<font color ="#0000FF">*&      Module  USER_COMMAND_0100  INPUT</font>
+<font color ="#0000FF">*&---------------------------------------------------------------------*</font>
+MODULE user_command_0100 INPUT.
+
+  CASE ok_code.
+    WHEN 'BACK'.
+      LEAVE TO SCREEN 0.
+
+    WHEN 'CHECK'. " 결산
+      gv_flag = 'X'.
+      PERFORM set_closing.
+      CLEAR gv_flag.
+
+    WHEN 'F090' .
+      SUBMIT zca_fi090 AND RETURN.
+
+    WHEN 'F080'.
+      SUBMIT zca_fi080 AND RETURN.
+
+    WHEN 'TRIAL'.
+      gv_flag = ''.
+      PERFORM set_closing.
+      CLEAR gv_flag.
+
+    WHEN OTHERS.
+      CALL METHOD cl_gui_cfw=&gt;dispatch.
+  ENDCASE.
+
+  CALL METHOD cl_gui_cfw=&gt;flush.
+ENDMODULE.
+<font color ="#0000FF">*&---------------------------------------------------------------------*</font>
+<font color ="#0000FF">*&      Module  USER_COMMAND_0120  INPUT</font>
+<font color ="#0000FF">*&---------------------------------------------------------------------*</font>
+MODULE user_command_0120 INPUT.
+
+  CASE ok_code.
+    WHEN 'CONT'.
+      IF gv_flag IS NOT INITIAL. " 결산 플래그
+        " 차, 대변 같은지 확인
+        IF s0120-status_icon NE icon_led_green.
+          MESSAGE i443 DISPLAY LIKE 'E'.  "  차/대변이 불일치 하여 결산이 불가능합니다.
+          RETURN.
+        ENDIF.
+
+        " 결산 여부 확인
+        DATA lv_answer TYPE c.
+
+        CALL FUNCTION 'POPUP_TO_CONFIRM'
+          EXPORTING
+            text_question         = '해당 주차를 결산하시겠습니까?'(q01)
+            text_button_1         = '예'(q02)
+            text_button_2         = '아니오'(q03)
+            default_button        = '1'
+            display_cancel_button = ' '
+          IMPORTING
+            answer                = lv_answer.
+
+        IF lv_answer &lt;&gt; '1'.
+          MESSAGE s416 DISPLAY LIKE 'E'.    " 결산이 취소되었습니다.
+          RETURN.
+        ENDIF.
+        " 예 누름
+        PERFORM save_closing_result USING s0120-year s0120-month s0120-week. " 이때 저장
+      ENDIF.
+      LEAVE TO SCREEN 0.
+  ENDCASE.
+
+ENDMODULE.
+<font color ="#0000FF">*&---------------------------------------------------------------------*</font>
+<font color ="#0000FF">*&      Module  USER_COMMAND_0130  INPUT</font>
+<font color ="#0000FF">*&---------------------------------------------------------------------*</font>
+MODULE user_command_0130 INPUT.
+
+  CASE ok_code.
+    WHEN 'CONT'.
+      LEAVE TO SCREEN 0.
+  ENDCASE.
+
+ENDMODULE.
+</pre>
+<hr>
+<font size="2" face = "Sans Serif">Extracted by Direct Download Enterprise version 1.3.1 - E.G.Mellodew. 1998-2005 UK. Sap Release 758
+</font>
+</body>
+</html>

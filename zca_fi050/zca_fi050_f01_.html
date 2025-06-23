@@ -1,0 +1,1187 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 3.2//EN">
+<html>
+<head>
+<title>ZCA_FI050_F01_</title>
+</head>
+<body bgcolor="#FFFFE0">
+<font size="3" face = "Arial" color="#000000"><b>Code listing for: ZCA_FI050_F01_</b></font>
+<br>
+<font size="3" face = "Arial" color="#000000"><b>Description:  F01</b></font>
+<hr>
+<pre width="100">
+<font color ="#0000FF">*&---------------------------------------------------------------------*</font>
+<font color ="#0000FF">*& Include          ZCA_FI050_F01</font>
+<font color ="#0000FF">*&---------------------------------------------------------------------*</font>
+<font color ="#0000FF">*&---------------------------------------------------------------------*</font>
+<font color ="#0000FF">*& Form select_data</font>
+<font color ="#0000FF">*&---------------------------------------------------------------------*</font>
+FORM select_data .
+
+  REFRESH gt_fit090.
+
+  " 고객원장 Select : 검색 조건에 따라
+  SELECT * FROM zca_fit090
+           INTO CORRESPONDING FIELDS OF TABLE gt_fit090
+           WHERE bukrs EQ pa_bukrs
+             AND gjahr EQ pa_gjahr
+             AND kunnr IN so_KUNNR
+             AND belnr IN so_belnr
+             AND itnum IN so_itnum
+             AND blart IN ('DA', 'DZ').
+
+
+ENDFORM.
+<font color ="#0000FF">*&---------------------------------------------------------------------*</font>
+<font color ="#0000FF">*& Form display_data</font>
+<font color ="#0000FF">*&---------------------------------------------------------------------*</font>
+FORM display_data .
+
+  CALL SCREEN 0100.
+
+ENDFORM.
+<font color ="#0000FF">*&---------------------------------------------------------------------*</font>
+<font color ="#0000FF">*& Form create_screen_object</font>
+<font color ="#0000FF">*&---------------------------------------------------------------------*</font>
+FORM create_screen_object  USING    po_container TYPE REF TO cl_gui_custom_container
+                                    po_alv_grid  TYPE REF TO cl_gui_alv_grid
+                                    VALUE(pv_container_name).
+
+  CREATE OBJECT po_container
+    EXPORTING
+      container_name = pv_container_name.
+
+  CREATE OBJECT po_alv_grid
+    EXPORTING
+      i_parent = po_container.
+
+ENDFORM.
+<font color ="#0000FF">*&---------------------------------------------------------------------*</font>
+<font color ="#0000FF">*& Form set_alv_table_for_display_0100</font>
+<font color ="#0000FF">*&---------------------------------------------------------------------*</font>
+FORM set_alv_table_for_display_0100 .
+
+  CALL METHOD go_alv_grid_0100-&gt;set_table_for_first_display
+    EXPORTING
+      i_structure_name = 'ZCA_FIT050'               " Internal Output Table Structure Name
+<font color ="#0000FF">*     is_variant       = gs_variant               " Layout</font>
+<font color ="#0000FF">*     i_save           = gs_save               " Save Layout</font>
+<font color ="#0000FF">*     is_layout        = gs_layout               " Layout</font>
+    CHANGING
+      it_outtab        = gt_items.               " Output Table
+<font color ="#0000FF">*      it_fieldcatalog               =                  " Field Catalog</font>
+<font color ="#0000FF">*      it_sort                       =                  " Sort Criteria</font>
+<font color ="#0000FF">*      it_filter                     =                  " Filter Criteria</font>
+
+  IF sy-subrc &lt;&gt; 0.
+    MESSAGE ID sy-msgid TYPE sy-msgty NUMBER sy-msgno
+    WITH sy-msgv1 sy-msgv2 sy-msgv3 sy-msgv4.
+  ENDIF.
+
+ENDFORM.
+<font color ="#0000FF">*&---------------------------------------------------------------------*</font>
+<font color ="#0000FF">*& Form set_alv_field_cat_0110</font>
+<font color ="#0000FF">*&---------------------------------------------------------------------*</font>
+FORM set_alv_field_cat_tab .
+
+  REFRESH gt_field_cat_0110.
+
+  " Exception Field : LIGHT
+  CLEAR gs_field_cat.
+  gs_field_cat-fieldname = 'LIGHT'.
+  gs_field_cat-coltext = '수금 상태'(f01).
+  gs_field_cat-col_pos = 1.
+  APPEND gs_field_cat TO gt_field_cat_0110.
+
+  " 계정명 출력
+  CLEAR gs_field_cat.
+  gs_field_cat-fieldname = 'GLTXT'.
+  gs_field_cat-coltext = '계정명'.
+  gs_field_cat-col_pos = 5.
+  APPEND gs_field_cat TO gt_field_cat_0110.
+
+  " 전기키명 출력
+  CLEAR gs_field_cat.
+  gs_field_cat-fieldname = 'BSTXT'.
+  gs_field_cat-coltext = '전기키명'.
+  gs_field_cat-col_pos = 7.
+  APPEND gs_field_cat TO gt_field_cat_0110.
+
+  " 전표유형명 출력
+  CLEAR gs_field_cat.
+  gs_field_cat-fieldname = 'DESCR'.
+  gs_field_cat-coltext = '전표유형명'.
+  gs_field_cat-col_pos = 5.
+  APPEND gs_field_cat TO gt_field_cat_0110.
+
+  " 수금마감 일자 출력
+  CLEAR gs_field_cat.
+  gs_field_cat-fieldname = 'DUE_DATE'.
+  gs_field_cat-coltext = '수금 마감 일자'(f02).
+  gs_field_cat-col_pos = 30.
+  gs_field_cat-emphasize  = 'C710'.  " 붉은 계열 강조 (예: 빨간색 음영)
+  APPEND gs_field_cat TO gt_field_cat_0110.
+
+
+  " 핫스팟
+  CLEAR gs_field_cat.
+  gs_field_cat-fieldname = 'BELNR'. " 전표 번호
+  gs_field_cat-hotspot = abap_on.
+  APPEND gs_field_cat TO gt_field_cat_0110.
+
+  CLEAR gs_field_cat.
+  gs_field_cat-fieldname = 'BSCHL'. " 전기키
+  gs_field_cat-hotspot = abap_on.
+  APPEND gs_field_cat TO gt_field_cat_0110.
+
+  CLEAR gs_field_cat.
+  gs_field_cat-fieldname = 'KUNNR'. " 고객코드
+  gs_field_cat-hotspot = abap_on.
+  APPEND gs_field_cat TO gt_field_cat_0110.
+
+  CLEAR gs_field_cat.
+  gs_field_cat-fieldname = 'XBLNR'. " 참조문서
+  gs_field_cat-hotspot = abap_on.
+  APPEND gs_field_cat TO gt_field_cat_0110.
+
+  PERFORM remove_timestamp TABLES gt_field_cat_0110.
+
+
+ENDFORM.
+<font color ="#0000FF">*&---------------------------------------------------------------------*</font>
+<font color ="#0000FF">*& Form make_display_data</font>
+<font color ="#0000FF">*&---------------------------------------------------------------------*</font>
+FORM make_display_data .
+
+  CLEAR gs_fit090.      " 고객 원장(AR)
+  CLEAR screen0100.     " 100번 Screen
+  REFRESH gt_undecide.  " 미결
+  REFRESH gt_clearing.  " 반제
+
+  green_num = 0.
+  yellow_num = 0.
+  red_num = 0.
+  total_price = 0.
+
+  LOOP AT gt_fit090 INTO gs_fit090.
+    DATA lv_gltxt TYPE zca_gltxt.
+    DATA lv_bstxt TYPE zca_bstxt.
+    DATA lv_descr TYPE zca_descr.
+
+    SELECT SINGLE txt20 FROM zca_fiv010v
+      INTO lv_gltxt WHERE saknr EQ gs_fit090-saknr.
+
+    SELECT SINGLE bstxt FROM zca_tbsl
+      INTO lv_bstxt WHERE bschl EQ gs_fit090-bschl.
+
+    SELECT SINGLE descr FROM zca_fit030
+      INTO lv_descr WHERE blart EQ gs_fit090-blart.
+
+    " 반제 여부가 비어있을 때 (미결)전표 일 때
+    IF gs_fit090-augdt IS INITIAL.
+      DATA ls_undecide LIKE LINE OF gt_undecide.
+      MOVE-CORRESPONDING gs_fit090 TO ls_undecide.
+      ls_undecide-gltxt = lv_gltxt.
+      ls_undecide-bstxt = lv_bstxt.
+      ls_undecide-descr = lv_descr.
+
+      " 수금 마감 날짜 계산
+      " 고객 BP에서 고객 코드를 이용해 지급 코드의 due date를 가져오고 증빙일자에 더함
+      call function <a href ="zca_fi_calc_tvzbr_cust/zca_fi_calc_tvzbr_cust.html">'ZCA_FI_CALC_TVZBR_CUST'</a>
+        EXPORTING
+          iv_kunnr      = ls_undecide-kunnr         " 고객 코드
+          iv_date       = ls_undecide-budat         " 증빙일자 =&gt; 전기 일자 기준으로 해야 함
+        IMPORTING
+          ev_tvzbr_date = ls_undecide-due_date.      " 마감 기한
+
+      " 그 날짜로 Exception Field를 설정
+      DATA lv_minus_date TYPE i. " 수금 남은 날짜 계산을 위한 변수
+      lv_minus_date = ls_undecide-due_date - sy-datum + 1. " 남은 날 계산
+
+      IF lv_minus_date &gt;= 7.   " 수금까지 7일 이상 남았을 때
+        ls_undecide-light = '3'. " green
+        screen0110-green_num += 1.
+        screen0110-green_price += ls_undecide-dmbtr.
+
+      ELSEIF lv_minus_date &gt; 0.  " 수금까지 1~6일 남았을 때
+        ls_undecide-light = '2'. " yellow
+        screen0110-yellow_num += 1.
+        screen0110-yellow_price += ls_undecide-dmbtr.
+
+      ELSE.                      " 남은 날이 없을 때
+        ls_undecide-light = '1'. "red
+        screen0110-red_num += 1.
+        screen0110-red_price += ls_undecide-dmbtr.
+
+      ENDIF.
+
+      screen0100-undecide_num += 1.
+      screen0100-undecide_price += gs_fit090-dmbtr.
+      screen0100-undecide_cuky = gs_fit090-waers.
+
+      " 총 미결금액 계산
+      screen0110-total_num += 1.
+      screen0110-total_price += ls_undecide-dmbtr.
+      screen0110-total_cuky = ls_undecide-waers.
+      APPEND ls_undecide TO gt_undecide.
+
+
+      " 반제 여부가 X (반제 처리 됨) && DZ(고객 지급) 전표 일 때
+    ELSE.
+
+      " 반제
+      DATA ls_clearing LIKE LINE OF gt_clearing.
+      MOVE-CORRESPONDING gs_fit090 TO ls_clearing.
+      ls_clearing-gltxt = lv_gltxt.
+      ls_clearing-bstxt = lv_bstxt.
+      ls_clearing-descr = lv_descr.
+
+      screen0100-clear_num += 1.
+      screen0100-clear_price += gs_fit090-dmbtr.
+      screen0100-clear_cuky = gs_fit090-waers.
+
+      APPEND ls_clearing TO gt_clearing.
+    ENDIF.
+
+  ENDLOOP.
+
+  screen0110-red_cuky = gs_fit090-waers.
+  screen0110-yellow_cuky = gs_fit090-waers.
+  screen0110-green_cuky = gs_fit090-waers.
+
+
+ENDFORM.
+<font color ="#0000FF">*&---------------------------------------------------------------------*</font>
+<font color ="#0000FF">*& Form make_gt_items</font>
+<font color ="#0000FF">*&---------------------------------------------------------------------*</font>
+FORM make_gt_items  USING   pv_bukrs
+                            pv_belnr
+                            pv_gjahr.
+
+  DATA : lt_item TYPE TABLE OF zca_fit050,
+         ls_item TYPE zca_fit050.
+
+  SELECT * FROM zca_fit050
+    INTO CORRESPONDING FIELDS OF TABLE lt_item
+    WHERE belnr EQ pv_belnr
+      AND bukrs EQ pv_bukrs
+      AND gjahr EQ pv_gjahr.
+
+  LOOP AT lt_item INTO ls_item.
+    CLEAR gs_items.
+    MOVE-CORRESPONDING ls_item TO gs_items.
+
+    " 전기키로 차변 대변 구별
+    DATA lv_indi TYPE zca_tbsl-indi_cd.
+    SELECT SINGLE indi_cd FROM zca_tbsl
+      INTO lv_indi WHERE bschl = ls_item-bschl.
+
+    IF lv_indi EQ 'S'. " 차변
+      gs_items-debit = ls_item-dmbtr.
+    ELSE.
+      gs_items-credit = ls_item-dmbtr.
+    ENDIF.
+    APPEND gs_items TO gt_items.
+
+  ENDLOOP.
+
+ENDFORM.
+<font color ="#0000FF">*&---------------------------------------------------------------------*</font>
+<font color ="#0000FF">*& Form set_handler_0110</font>
+<font color ="#0000FF">*&---------------------------------------------------------------------*</font>
+FORM set_handler_0110 .
+
+  SET HANDLER lcl_event_handler=&gt;on_hotspot_click FOR go_alv_grid_0110.
+
+  " ALV Grid 객체의 Toolbar 이벤트에 반응하여 실행할 메소드를 등록
+  SET HANDLER lcl_event_handler=&gt;on_toolbar FOR go_alv_grid_0110.
+
+  SET HANDLER lcl_event_handler=&gt;on_user_command FOR go_alv_grid_0110.
+
+ENDFORM.
+<font color ="#0000FF">*&---------------------------------------------------------------------*</font>
+<font color ="#0000FF">*& Form remove_timestamp</font>
+<font color ="#0000FF">*&---------------------------------------------------------------------*</font>
+FORM remove_timestamp  TABLES  pt_field_cat.
+
+  CLEAR gs_field_cat_tab.
+  gs_field_cat_tab-fieldname = 'ERNAM'.
+  gs_field_cat_tab-no_out = abap_on.
+  APPEND gs_field_cat_tab TO pt_field_cat.
+
+  CLEAR gs_field_cat_tab.
+  gs_field_cat_tab-fieldname = 'ERDAT'.
+  gs_field_cat_tab-no_out = abap_on.
+  APPEND gs_field_cat_tab TO pt_field_cat.
+
+  CLEAR gs_field_cat_tab.
+  gs_field_cat_tab-fieldname = 'ERZET'.
+  gs_field_cat_tab-no_out = abap_on.
+  APPEND gs_field_cat_tab TO pt_field_cat.
+
+  CLEAR gs_field_cat_tab.
+  gs_field_cat_tab-fieldname = 'AENAM'.
+  gs_field_cat_tab-no_out = abap_on.
+  APPEND gs_field_cat_tab TO pt_field_cat.
+
+  CLEAR gs_field_cat_tab.
+  gs_field_cat_tab-fieldname = 'AEDAT'.
+  gs_field_cat_tab-no_out = abap_on.
+  APPEND gs_field_cat_tab TO pt_field_cat.
+
+  CLEAR gs_field_cat_tab.
+  gs_field_cat_tab-fieldname = 'AEZET'.
+  gs_field_cat_tab-no_out = abap_on.
+  APPEND gs_field_cat_tab TO pt_field_cat.
+
+ENDFORM.
+<font color ="#0000FF">*&---------------------------------------------------------------------*</font>
+<font color ="#0000FF">*& Form set_alv_filter</font>
+<font color ="#0000FF">*&---------------------------------------------------------------------*</font>
+FORM set_alv_filter  USING  pv_light.
+
+  DATA lt_filter TYPE lvc_t_filt.         " ALV 필터 조건을 담을 내부 테이블
+  DATA ls_filter LIKE LINE OF lt_filter.  " ALV 필터 조건의 한 줄 구조
+
+  " 필터 조건이 전달되었을 경우에만 필터 조건 생성
+  IF pv_light IS NOT INITIAL.
+
+    CLEAR ls_filter.
+    ls_filter-fieldname = 'LIGHT'.   " 필터를 적용할 필드명 (LIGHT 컬럼)
+    ls_filter-sign = 'I'.            " Include (포함)
+    ls_filter-option = 'EQ'.         " Equal 조건
+    ls_filter-low = pv_light.        " 필터 기준값 (입력 파라미터)
+    ls_filter-high = space.          " HIGH 값은 EQ 조건에서는 사용되지 않음
+
+    APPEND ls_filter TO lt_filter.   " 필터 조건을 테이블에 추가
+
+  ENDIF.
+
+  " ALV Grid에 필터 조건 적용
+  CALL METHOD go_alv_grid_0110-&gt;set_filter_criteria
+    EXPORTING
+      it_filter = lt_filter.     " 필터 조건 테이블 전달
+
+  " 필터 적용 실패 시 메시지 출력
+  IF sy-subrc &lt;&gt; 0.
+    MESSAGE ID sy-msgid TYPE sy-msgty NUMBER sy-msgno
+    WITH sy-msgv1 sy-msgv2 sy-msgv3 sy-msgv4.
+  ENDIF.
+
+  DATA ls_stable TYPE lvc_s_stbl.
+
+  " ALV 갱신 시 현재 행(Row)과 열(Column) 위치를 유지
+  ls_stable-row = abap_on.
+  ls_stable-col = abap_on.
+
+  " ALV를 필터 적용 후 화면 갱신 (행/열 유지 설정 적용)
+  CALL METHOD go_alv_grid_0110-&gt;refresh_table_display
+    EXPORTING
+      is_stable = ls_stable.   " 갱신 시 행/열 고정
+
+ENDFORM.
+<font color ="#0000FF">*&---------------------------------------------------------------------*</font>
+<font color ="#0000FF">*& Form make_clearing</font>
+<font color ="#0000FF">*&---------------------------------------------------------------------*</font>
+FORM make_clearing .
+
+  DATA: lt_rows        TYPE lvc_t_row,
+        lv_row         TYPE lvc_s_row,
+        ls_undecide    TYPE ty_cust,
+        lv_first_kunnr TYPE kunnr,
+        lv_diff_found  TYPE abap_bool.
+
+  " 선택된 행 가져오기
+  CALL METHOD go_alv_grid_0110-&gt;get_selected_rows
+    IMPORTING
+      et_index_rows = lt_rows.
+
+  IF lt_rows IS INITIAL .
+    MESSAGE s437 DISPLAY LIKE 'W'. " 선택된 행이 없습니다.
+    RETURN.
+  ENDIF.
+
+  " 선택된 행들에서 같은 고객인지 확인
+  LOOP AT lt_rows INTO lv_row.
+
+    " subtotal 등 무효 행 필터링
+    IF lv_row-rowtype IS NOT INITIAL.
+      MESSAGE s438 DISPLAY LIKE 'W'. " 집계 행은 선택할 수 없습니다.
+      RETURN.
+    ENDIF.
+
+    READ TABLE gt_undecide INTO ls_undecide INDEX lv_row-index.
+    IF sy-subrc NE 0.
+      MESSAGE s429 DISPLAY LIKE 'E'. " 선택한 데이터를 찾을 수 없습니다.
+      RETURN.
+    ENDIF.
+
+    " 같은 고객인지를 확인함
+    IF lv_first_kunnr IS INITIAL.
+      lv_first_kunnr = ls_undecide-kunnr. " 현재 항목의 고객 번호를 기준 고객 번호로 저장
+    ELSEIF lv_first_kunnr &lt;&gt; ls_undecide-kunnr. " 이후 항목의 고객 번호가 기준 고객 번호와 다르면
+      lv_diff_found = abap_true.    " 고객이 다름을 표시하는 플래그 설정
+      EXIT.
+    ENDIF.
+
+  ENDLOOP.
+
+  IF lv_diff_found = abap_true.
+    MESSAGE i440 DISPLAY LIKE 'E'.  " 서로 다른 고객코드가 선택되었습니다. 동일한 고객만 처리 가능합니다.
+    RETURN.
+  ENDIF.
+
+  gv_bpcode = ls_undecide-kunnr.
+
+  " 서로 같은 고객일 때
+  " 팝업에 넘길 데이터 세팅
+  REFRESH : gt_popup_data, gt_selected.
+  DATA lt_popup_data LIKE TABLE OF gs_popup_data.
+
+  LOOP AT lt_rows INTO lv_row.
+    READ TABLE gt_undecide INTO ls_undecide INDEX lv_row-index.
+    screen0130-total_price += ls_undecide-dmbtr.
+    APPEND ls_undecide TO gt_selected. " 선택한 행은 gt_selected로 복사
+
+    " 관련 전표 아이템 다 가져오기
+    SELECT * FROM zca_fit050
+    INTO CORRESPONDING FIELDS OF TABLE lt_popup_data
+    WHERE bukrs EQ  ls_undecide-bukrs
+      AND belnr EQ  ls_undecide-belnr
+      AND gjahr EQ  ls_undecide-gjahr.
+
+    LOOP AT lt_popup_data INTO DATA(ls_popup_data).
+      " bstxt
+      SELECT SINGLE bstxt FROM zca_tbsl INTO ls_popup_data-bstxt
+        WHERE bschl EQ ls_popup_data-bschl.
+
+      IF ls_popup_data-bschl EQ '11' OR ls_popup_data-bschl EQ '21' OR ls_popup_data-bschl EQ '31' OR ls_popup_data-bschl EQ '41' OR ls_popup_data-bschl EQ '81'.
+        ls_popup_data-debit = ls_popup_data-dmbtr.  " 차변 전기
+      ELSE.
+        ls_popup_data-credit = ls_popup_data-dmbtr. " 대변 전기
+      ENDIF.
+
+      MODIFY lt_popup_data FROM ls_popup_data TRANSPORTING bstxt debit credit.
+    ENDLOOP.
+
+    APPEND LINES OF lt_popup_data TO gt_popup_data.
+
+  ENDLOOP.
+
+  screen0130-total_cuky = ls_undecide-waers.
+  CALL SCREEN 130 STARTING AT 10 5. " 팝업창 호출
+  CLEAR screen0130-total_price.
+
+  IF gv_refresh EQ 'X'.
+    PERFORM refresh_0100.
+  ENDIF.
+
+ENDFORM.
+<font color ="#0000FF">*&---------------------------------------------------------------------*</font>
+<font color ="#0000FF">*& Form make_receive_docu</font>
+<font color ="#0000FF">*&---------------------------------------------------------------------*</font>
+FORM make_receive_docu .
+
+  DATA lv_answer TYPE c.
+
+  CALL FUNCTION 'POPUP_TO_CONFIRM'
+    EXPORTING
+      titlebar              = '수금 처리'(t05)
+      text_question         = '수금처리를 진행하시겠습니까?'(t02)
+      text_button_1         = '예'(t03)
+      text_button_2         = '아니오'(t04)
+      default_button        = '1'
+      display_cancel_button = ' '
+    IMPORTING
+      answer                = lv_answer.
+
+  IF lv_answer = '1'.
+    gv_refresh = 'X'.
+
+    DATA: lv_belnr     TYPE zca_fit050-belnr.
+    DATA lv_saknr TYPE zca_saknr.
+    lv_saknr = '1100030000'. " 보통예금 계정
+
+    " 전표 데이터 업데이트 & 고객 원장 업데이트
+    LOOP AT gt_selected INTO gs_selected.
+
+      DATA ev_belnr TYPE zca_belnr.
+
+
+      " gt_selected 기반으로 전표 번호 하나 당 지급 전표를 생성한다. (반제 처리까지) + 이때 실제 전표 번호를 기록 (반제 번호에)
+      PERFORM create_payment_document USING gs_selected lv_saknr
+                                   CHANGING ev_belnr.
+
+      " gt_selected의 전표들도 반제 처리를 한다. + 반제 전표 번호 기록
+      PERFORM clear_documents_with_refs USING gs_selected ev_belnr.
+
+      " 화면에 대한 internal table 과 i/o 들을 변경해준다.
+      READ TABLE gt_undecide WITH KEY belnr = gs_selected-belnr TRANSPORTING NO FIELDS.
+
+      IF sy-subrc = 0.
+        DATA(lv_index) = sy-tabix.
+        gt_undecide[ lv_index ]-augdt = 'X'.
+        gt_undecide[ lv_index ]-augbl = ev_belnr.
+        MOVE-CORRESPONDING gt_undecide[ lv_index ] TO gs_clearing.
+
+        CASE gt_undecide[ lv_index ]-light.
+          WHEN '3'.
+            screen0110-green_num   -= 1.
+            screen0110-green_price -= gs_clearing-dmbtr.
+          WHEN '2'.
+            screen0110-yellow_num   -= 1.
+            screen0110-yellow_price -= gs_clearing-dmbtr.
+          WHEN '1'.
+            screen0110-red_num   -= 1.
+            screen0110-red_price -= gs_clearing-dmbtr.
+        ENDCASE.
+
+        screen0110-total_num -= 1.
+        screen0110-total_price -= gs_clearing-dmbtr.
+
+
+        APPEND gs_clearing TO gt_clearing.
+
+        screen0100-undecide_num -= 1.
+        screen0100-undecide_price -= gs_clearing-dmbtr.
+        screen0100-clear_num   += 1.
+        screen0100-clear_price += gs_clearing-dmbtr.
+
+
+        total_price -= gt_undecide[ lv_index ]-dmbtr.
+        DELETE gt_undecide INDEX lv_index.
+
+      ENDIF.
+
+      PERFORM update_sdt020 USING  gs_selected. " 수금 마감 기한을 사용
+
+    ENDLOOP.
+
+    LEAVE TO SCREEN 0. " 현재 화면을 다시 로드 (팁: 0은 현재화면)
+  ENDIF.
+
+ENDFORM.
+<font color ="#0000FF">*&---------------------------------------------------------------------*</font>
+<font color ="#0000FF">*& Form set_handler_0120</font>
+<font color ="#0000FF">*&---------------------------------------------------------------------*</font>
+FORM set_handler_0120 .
+
+<font color ="#0000FF">*  " ALV Grid 객체의 Hot spot Click 이벤트에 반응하여 실행할 메소드를 등록</font>
+  SET HANDLER lcl_event_handler=&gt;on_hotspot_click FOR go_alv_grid_0120.
+
+  " ALV Grid 객체의 Toolbar 이벤트에 반응하여 실행할 메소드를 등록
+  SET HANDLER lcl_event_handler=&gt;on_toolbar FOR go_alv_grid_0120.
+
+  SET HANDLER lcl_event_handler=&gt;on_user_command FOR go_alv_grid_0120.
+
+
+ENDFORM.
+<font color ="#0000FF">*&---------------------------------------------------------------------*</font>
+<font color ="#0000FF">*& Form refresh_0100</font>
+<font color ="#0000FF">*&---------------------------------------------------------------------*</font>
+FORM refresh_0100 .
+
+  REFRESH gt_items.
+  LEAVE TO SCREEN 0100.
+
+ENDFORM.
+<font color ="#0000FF">*&---------------------------------------------------------------------*</font>
+<font color ="#0000FF">*& Form set_alv_layout_0120</font>
+<font color ="#0000FF">*&---------------------------------------------------------------------*</font>
+FORM set_alv_layout_0120 .
+
+  CLEAR gs_layout_0120.
+
+  gs_layout_0120-sel_mode = 'D'. " 복수행 선택 + 행 선택 칼럼 생성 + ANY 셀 선택 가능
+  gs_layout_0120-zebra = abap_on. " 얼룩모드
+  gs_layout_0120-cwidth_opt = abap_on. " 열 넓이 최적화
+
+<font color ="#0000FF">* Variant 관련</font>
+  gs_variant_0120-report    = sy-cprog. " 저장 가능하도록 설정
+<font color ="#0000FF">*  gs_variant-handle 설정해줘야 함</font>
+  gv_save_0120              = 'A'.
+
+
+ENDFORM.
+<font color ="#0000FF">*&---------------------------------------------------------------------*</font>
+<font color ="#0000FF">*& Form set_alv_field_cat_0120</font>
+<font color ="#0000FF">*&---------------------------------------------------------------------*</font>
+FORM set_alv_field_cat_0120 .
+
+  REFRESH gt_field_cat_0120.
+
+  CLEAR gs_field_cat.
+  gs_field_cat-fieldname = 'GLTXT'.
+  gs_field_cat-coltext = '계정명'.
+  gs_field_cat-col_pos = 5.
+  APPEND gs_field_cat TO gt_field_cat_0120.
+
+  CLEAR gs_field_cat.
+  gs_field_cat-fieldname = 'BSTXT'.
+  gs_field_cat-coltext = '전기키명'.
+  gs_field_cat-col_pos = 7.
+  APPEND gs_field_cat TO gt_field_cat_0120.
+
+  CLEAR gs_field_cat.
+  gs_field_cat-fieldname = 'DESCR'.
+  gs_field_cat-coltext = '전표유형명'.
+  gs_field_cat-col_pos = 13.
+  APPEND gs_field_cat TO gt_field_cat_0120.
+
+  CLEAR gs_field_cat.
+  gs_field_cat-fieldname = 'AUGDT'.
+  gs_field_cat-checkbox = 'X'.
+  APPEND gs_field_cat TO gt_field_cat_0120.
+
+  " 핫스팟
+  CLEAR gs_field_cat.
+  gs_field_cat-fieldname = 'BELNR'.
+  gs_field_cat-hotspot = abap_on.
+  APPEND gs_field_cat TO gt_field_cat_0120.
+
+  CLEAR gs_field_cat.
+  gs_field_cat-fieldname = 'BSCHL'.
+  gs_field_cat-hotspot = abap_on.
+  APPEND gs_field_cat TO gt_field_cat_0120.
+
+  CLEAR gs_field_cat.
+  gs_field_cat-fieldname = 'LIFNR'.
+  gs_field_cat-hotspot = abap_on.
+  APPEND gs_field_cat TO gt_field_cat_0120.
+
+  CLEAR gs_field_cat.
+  gs_field_cat-fieldname = 'XBLNR'.
+  gs_field_cat-hotspot = abap_on.
+  APPEND gs_field_cat TO gt_field_cat_0120.
+
+  CLEAR gs_field_cat.
+  gs_field_cat-fieldname = 'AUGBL'.
+  gs_field_cat-hotspot = abap_on.
+  APPEND gs_field_cat TO gt_field_cat_0120.
+
+  PERFORM remove_timestamp TABLES gt_field_cat_0120.
+
+ENDFORM.
+<font color ="#0000FF">*&---------------------------------------------------------------------*</font>
+<font color ="#0000FF">*& Form create_payment_document</font>
+<font color ="#0000FF">*&---------------------------------------------------------------------*</font>
+FORM create_payment_document  USING  ps_selected TYPE ty_cust  " 전표 하나
+                                     pv_saknr    TYPE zca_saknr  " 계정
+                            CHANGING pv_belnr    TYPE zca_belnr. " 반환해 줄 지급 전표 번호
+
+  " 보통예금 / 매출 할인 | 외상매출금
+  DATA: ls_fit040 TYPE zca_fit040,
+        ls_fit050 TYPE zca_fit050.
+<font color ="#0000FF">*        ls_sdt120 TYPE zca_sdt120.</font>
+
+  " 청구서 정보 가져오기 (수금완료 찍기 위함)
+  SELECT SINGLE * FROM zca_sdt120
+           INTO gs_sdt120
+           WHERE inv_no EQ ps_selected-xblnr.
+
+  IF gs_sdt120-status3 IS INITIAL.  " 수금 완료 여부가 공백이라면,
+    " 청구서 수금 완료 UPDATE
+    UPDATE zca_sdt120
+       SET status3 = 'X'  " 수금 완료 여부 표시
+       WHERE inv_no EQ ps_selected-xblnr. " 현재 전표의 참조문서인 청구서에 대하여
+  ENDIF.
+
+  " 헤더 생성 + 아이템 생성
+  " 차변 보통예금
+  call function <a href ="zca_fi_post_docu/zca_fi_post_docu.html">'ZCA_FI_POST_DOCU'</a>
+    EXPORTING
+      iv_bukrs = '1001'              " 회사코드
+      iv_gjahr = ps_selected-gjahr     " 회계연도
+      iv_blart = 'DZ'                " 고객 수금 전표
+      iv_bldat = '20250411'            " 증빙일자(이미 있는 헤더를 사용할 땐 X) &lt;-- 여기도 날짜
+      iv_budat = '20250411'            " 전기일자(이미 있는 헤더를 사용할 땐 X) &lt;-- 여기도 날짜
+      iv_bltxt = '고객사 수금 전표'  " 전표 헤더 텍스트(이미 있는 헤더를 사용할 땐 X)
+      iv_xblnr = ps_selected-xblnr     " 참조문서
+      iv_bschl = 11                  " 전기키 : 고객 차변
+      iv_saknr = '1100030000'        " G/L 계정 = 보통예금
+      iv_dmbtr = gs_sdt120-finalamt    " 금액(KRW)
+      iv_waers = ps_selected-waers    " 통화코드
+      iv_augdt = 'X'                  " 지급하면서 반제 처리
+      iv_augbl = ps_selected-belnr    " 해당 전표가 &gt; 결국 반제 전표
+    IMPORTING
+      ev_bukrs = ls_fit040-bukrs                 " 회사코드
+      ev_belnr = ls_fit040-belnr                 " 전표번호
+      ev_gjahr = ls_fit040-gjahr                 " 회계연도
+      ev_itnum = ls_fit050-itnum.
+
+
+  " 대변 외상매출금
+  call function <a href ="zca_fi_post_docu/zca_fi_post_docu.html">'ZCA_FI_POST_DOCU'</a>
+    EXPORTING
+      iv_bukrs  = ls_fit040-bukrs      " 회사코드
+      iv_gjahr  = ls_fit040-gjahr      " 회계연도
+      iv_belnr  = ls_fit040-belnr      " 전표번호(헤더 생성 때는 적지 않는다)
+      iv_bschl  = 12                   " 전기키
+      iv_saknr  = '1100040000'         " G/L 계정
+      iv_dmbtr  = gs_sdt120-finalamt   " 금액(KRW)
+      iv_waers  = ps_selected-waers    " 통화코드
+      iv_bpcode = gs_sdt120-cuscode    " BP 코드
+      iv_augdt  = 'X'                  " 지급하면서 반제 처리
+      iv_augbl  = ps_selected-belnr    " 해당 전표가 &gt; 결국 반제 전표
+    IMPORTING
+      ev_bukrs  = ls_fit040-bukrs                 " 회사코드
+      ev_belnr  = ls_fit040-belnr                 " 전표번호
+      ev_gjahr  = ls_fit040-gjahr                 " 회계연도
+      ev_itnum  = ls_fit050-itnum.
+
+  " 보조 원장에 넘기기
+  call function <a href ="zca_fi_post_recon_cust/zca_fi_post_recon_cust.html">'ZCA_FI_POST_RECON_CUST'</a>   " 외상매출금 계정만 가지고 옴
+    EXPORTING
+      i_bukrs   = ls_fit040-bukrs                   " 회사코드
+      i_belnr   = ls_fit040-belnr                   " 전표번호
+      i_gjahr   = ls_fit040-gjahr                   " 회계연도
+      i_itnum   = ls_fit050-itnum                   " 아이템번호
+      i_caldate = '20250411'.                       " 수금일 &lt;--이거 바꾸기
+
+
+  pv_belnr = ls_fit040-belnr. " 반환 해 줄 수금  전표
+
+  " 새로 생성된 지급 전표(KZ)에 해당하는 전표 아이템을 가져옴
+  DATA: lt_dz_items TYPE TABLE OF zca_fit090,
+        ls_dz_item  TYPE zca_fit090,
+        ls_clearing TYPE ty_clear,
+        lv_gltxt    TYPE zca_gltxt,
+        lv_bstxt    TYPE zca_bstxt,
+        lv_descr    TYPE zca_descr.
+
+  SELECT * INTO TABLE lt_dz_items
+  FROM zca_fit090
+  WHERE bukrs = ls_fit040-bukrs
+    AND gjahr = ls_fit040-gjahr
+    AND belnr = ls_fit040-belnr
+    AND blart = 'DZ'.
+
+  LOOP AT lt_dz_items INTO ls_dz_item.
+    CLEAR: ls_clearing, lv_gltxt, lv_bstxt, lv_descr.
+
+    " 기본 필드 복사
+    MOVE-CORRESPONDING ls_dz_item TO ls_clearing.
+
+    " 부가 텍스트 조회
+    SELECT SINGLE txt20 INTO lv_gltxt FROM zca_fiv010v
+      WHERE saknr = ls_dz_item-saknr.
+
+    SELECT SINGLE bstxt INTO lv_bstxt FROM zca_tbsl
+      WHERE bschl = ls_dz_item-bschl.
+
+    SELECT SINGLE descr INTO lv_descr FROM zca_fit030
+      WHERE blart = ls_dz_item-blart.
+
+    ls_clearing-gltxt = lv_gltxt.
+    ls_clearing-bstxt = lv_bstxt.
+    ls_clearing-descr = lv_descr.
+
+    APPEND ls_clearing TO gt_clearing.
+  ENDLOOP.
+
+
+ENDFORM.
+<font color ="#0000FF">*&---------------------------------------------------------------------*</font>
+<font color ="#0000FF">*& Form clear_documents_with_refs</font>
+<font color ="#0000FF">*&---------------------------------------------------------------------*</font>
+FORM clear_documents_with_refs  USING   ps_selected TYPE ty_cust
+                                        pv_belnr    TYPE zca_belnr.
+
+  " 수금 처리 수행
+  " 현재 전표 번호에 대한 아이템들을 반제처리
+  " 반제 수행
+  UPDATE zca_fit050
+     SET augdt = 'X',
+         augbl = @pv_belnr
+   WHERE bukrs = @ps_selected-bukrs
+     AND belnr = @ps_selected-belnr
+     AND gjahr = @ps_selected-gjahr.
+
+  " 고객 원장에도 반제 처리 기록
+  UPDATE zca_fit090
+     SET cal_date = @sy-datum,  " 수금일은 오늘로
+         augdt = 'X',
+         augbl = @pv_belnr,
+         aenam = @sy-uname,
+         aedat = @sy-datum,
+         aezet = @sy-uzeit
+    WHERE bukrs = @ps_selected-bukrs
+      AND belnr = @ps_selected-belnr
+      AND gjahr = @ps_selected-gjahr.
+
+  IF sy-subrc EQ 0. " 수정 성공
+    COMMIT WORK.
+  ENDIF.
+
+ENDFORM.
+<font color ="#0000FF">*&---------------------------------------------------------------------*</font>
+<font color ="#0000FF">*& Form update_sdt020</font>
+<font color ="#0000FF">*&---------------------------------------------------------------------*</font>
+FORM update_sdt020  USING ps_fit090 TYPE  ty_cust.
+
+  DATA : lt_update020 TYPE TABLE OF zca_fiv040,
+         ls_update020 TYPE zca_fiv040,
+         lv_date      TYPE zca_bldat,
+         lv_count     TYPE zca_sdt020-default_count.  " 채무 불이행 횟수
+
+  " 수금 마감 날짜 계산
+  " 고객 BP에서 고객 코드를 이용해 지급 코드의 due date를 가져오고 증빙일자에 더함
+  call function <a href ="zca_fi_calc_tvzbr_cust/zca_fi_calc_tvzbr_cust.html">'ZCA_FI_CALC_TVZBR_CUST'</a>
+    EXPORTING
+      iv_kunnr      = ps_fit090-kunnr         " 고객 코드
+      iv_date       = ps_fit090-budat         " 증빙일자 =&gt; 전기 일자 기준으로 해야 함
+    IMPORTING
+      ev_tvzbr_date = lv_date.      " 마감 기한
+
+  " 수금 관리 DB View -&gt; 그 전표 고객에 대한 모든 원장 조회
+  SELECT * FROM zca_fiv040
+           INTO TABLE lt_update020
+           WHERE cuscode EQ ps_fit090-kunnr.
+
+  SELECT SINGLE default_count FROM zca_sdt020
+                       INTO lv_count
+                       WHERE cuscode EQ ps_fit090-kunnr.
+
+
+
+  CASE gs_sdt120-status3.
+    WHEN 'X'. " 수금이 되었을 때
+
+      " 여신 잔액 복구
+      PERFORM sd_restore_credit USING gs_sdt120.
+
+      IF sy-datum &gt; lv_date. " 수금 날짜(오늘) &gt; 마감 기한
+        " 채무 불이행 횟수 늘림
+        lv_count += 1.
+      ENDIF.
+
+  ENDCASE.
+
+<font color ="#0000FF">*     CASE gs_update020-status3.</font>
+<font color ="#0000FF">*      WHEN 'X'. " 수금이 되었을 때</font>
+<font color ="#0000FF">*        IF ls_update020-cal_date &gt; lv_date. " 수금 날짜 &gt; 마감 기한</font>
+<font color ="#0000FF">*          " 채무 불이행 횟수 늘림</font>
+<font color ="#0000FF">*          lv_count += 1.</font>
+<font color ="#0000FF">*        ENDIF.</font>
+<font color ="#0000FF">*</font>
+<font color ="#0000FF">*      WHEN ' '. " 수금 안됐을 때</font>
+<font color ="#0000FF">*        IF sy-datum &gt; lv_date. " 오늘 &gt; 마감 기한</font>
+<font color ="#0000FF">*          " 채무 불이행 횟수 늘림</font>
+<font color ="#0000FF">*          lv_count += 1.</font>
+<font color ="#0000FF">*        ENDIF.</font>
+<font color ="#0000FF">*    ENDCASE.</font>
+
+
+
+<font color ="#0000FF">*  LOOP AT lt_update020 INTO ls_update020.</font>
+<font color ="#0000FF">*</font>
+<font color ="#0000FF">*    CASE ls_update020-status3.</font>
+<font color ="#0000FF">*      WHEN 'X'. " 수금이 되었을 때</font>
+<font color ="#0000FF">*        IF ls_update020-cal_date &gt; lv_date. " 수금 날짜 &gt; 마감 기한</font>
+<font color ="#0000FF">*          " 채무 불이행 횟수 늘림</font>
+<font color ="#0000FF">*          lv_count += 1.</font>
+<font color ="#0000FF">*        ENDIF.</font>
+<font color ="#0000FF">*</font>
+<font color ="#0000FF">*      WHEN ' '. " 수금 안됐을 때</font>
+<font color ="#0000FF">*        IF sy-datum &gt; lv_date. " 오늘 &gt; 마감 기한</font>
+<font color ="#0000FF">*          " 채무 불이행 횟수 늘림</font>
+<font color ="#0000FF">*          lv_count += 1.</font>
+<font color ="#0000FF">*        ENDIF.</font>
+<font color ="#0000FF">*    ENDCASE.</font>
+<font color ="#0000FF">*</font>
+<font color ="#0000FF">*  ENDLOOP.</font>
+
+  UPDATE zca_sdt020
+     SET default_count = lv_count
+     WHERE cuscode EQ ps_fit090-kunnr.
+
+  SELECT SINGLE default_count FROM zca_sdt020
+                       INTO lv_count
+                       WHERE cuscode EQ ps_fit090-kunnr.
+
+  "계약 취소
+  IF lv_count &gt;= 3.
+    PERFORM sd_revoke_contract USING gs_sdt120.
+  ENDIF.
+
+  CLEAR lv_count.
+ENDFORM.
+<font color ="#0000FF">*&---------------------------------------------------------------------*</font>
+<font color ="#0000FF">*& Form set_alv_layout_0130</font>
+<font color ="#0000FF">*&---------------------------------------------------------------------*</font>
+FORM set_alv_layout_0130 .
+
+  CLEAR gs_layout_0130.
+
+  " 선택모드
+  gs_layout_0130-sel_mode = 'A'.
+  " 얼룩 처리
+  gs_layout_0130-zebra = abap_on.
+  " 열 넓이 최적화
+  gs_layout_0130-cwidth_opt = abap_on.
+
+  gs_variant_0130-report = sy-repid.
+  gs_variant_0130-handle = '0130'.
+  gv_save_0130 = 'A'.
+
+ENDFORM.
+<font color ="#0000FF">*&---------------------------------------------------------------------*</font>
+<font color ="#0000FF">*& Form set_alv_fieldcat_0130</font>
+<font color ="#0000FF">*&---------------------------------------------------------------------*</font>
+FORM set_alv_fieldcat_0130 .
+
+
+  REFRESH gt_field_cat_0130.
+
+  CLEAR gs_field_cat.
+  gs_field_cat-fieldname = 'BSTXT'.
+  gs_field_cat-coltext = '전기키명'.
+  gs_field_cat-col_pos = 7.
+  APPEND gs_field_cat TO gt_field_cat_0130.
+
+  CLEAR gs_field_cat.
+  gs_field_cat-fieldname = 'DEBIT'.
+  gs_field_cat-coltext = '차변'.
+  gs_field_cat-ref_field = 'DMBTR'.
+  gs_field_cat-ref_table = 'ZCA_FIT050'.
+  gs_field_cat-cfieldname = 'WAERS'.
+  gs_field_cat-col_pos = 7.
+  APPEND gs_field_cat TO gt_field_cat_0130.
+
+  CLEAR gs_field_cat.
+  gs_field_cat-fieldname = 'CREDIT'.
+  gs_field_cat-coltext = '대변'.
+  gs_field_cat-ref_field = 'DMBTR'.
+  gs_field_cat-ref_table = 'ZCA_FIT050'.
+  gs_field_cat-cfieldname = 'WAERS'.
+  gs_field_cat-col_pos = 7.
+  APPEND gs_field_cat TO gt_field_cat_0130.
+
+  " 핫스팟
+  CLEAR gs_field_cat.
+  gs_field_cat-fieldname = 'BELNR'.
+  gs_field_cat-hotspot = abap_on.
+  APPEND gs_field_cat TO gt_field_cat_0130.
+
+  CLEAR gs_field_cat.
+  gs_field_cat-fieldname = 'BSCHL'.
+  gs_field_cat-hotspot = abap_on.
+  APPEND gs_field_cat TO gt_field_cat_0130.
+
+  PERFORM remove_timestamp TABLES gt_field_cat_0130.
+
+
+ENDFORM.
+<font color ="#0000FF">*&---------------------------------------------------------------------*</font>
+<font color ="#0000FF">*& Form set_alv_event_0130</font>
+<font color ="#0000FF">*&---------------------------------------------------------------------*</font>
+FORM set_alv_event_0130 .
+
+ENDFORM.
+<font color ="#0000FF">*&---------------------------------------------------------------------*</font>
+<font color ="#0000FF">*& Form set_alv_table_for_display</font>
+<font color ="#0000FF">*&---------------------------------------------------------------------*</font>
+FORM set_alv_table_for_display   USING  pt_table          TYPE STANDARD TABLE
+                                        po_alv_grid       TYPE REF TO cl_gui_alv_grid
+                                        pv_structure_name TYPE c
+                                        ps_layout         TYPE lvc_s_layo
+                                        ps_variant        TYPE disvariant
+                                        pv_save           TYPE c
+                                        pt_field_cat      TYPE STANDARD TABLE .
+
+  CALL METHOD po_alv_grid-&gt;set_table_for_first_display
+    EXPORTING
+      i_structure_name = pv_structure_name    " Internal Output Table Structure Name
+      is_variant       = ps_variant       " Layout
+      i_save           = pv_save          " Save Layout
+      is_layout        = ps_layout        " Layout
+    CHANGING
+      it_outtab        = pt_table       " Output Table
+      it_fieldcatalog  = pt_field_cat.     " Field Catalog
+<font color ="#0000FF">*     it_sort          =                  " Sort Criteria</font>
+<font color ="#0000FF">*     it_filter        =                  " Filter Criteria</font>
+
+  IF sy-subrc &lt;&gt; 0.
+    MESSAGE ID sy-msgid TYPE sy-msgty NUMBER sy-msgno
+    WITH sy-msgv1 sy-msgv2 sy-msgv3 sy-msgv4.
+  ENDIF.
+
+ENDFORM.
+<font color ="#0000FF">*&---------------------------------------------------------------------*</font>
+<font color ="#0000FF">*& Form set_alv_layout_0120_B</font>
+<font color ="#0000FF">*&---------------------------------------------------------------------*</font>
+FORM set_alv_layout_0120_B .
+
+  CLEAR gs_layout_0120_b.
+
+  " 선택모드는 셀 단위로 지정
+  gs_layout_0120_b-sel_mode = 'A'.
+  " 얼룩 처리
+  gs_layout_0120_b-zebra = abap_on.
+  " 열 넓이 최적화
+  gs_layout_0120_b-cwidth_opt = abap_on.
+
+  gs_variant_0120_b-report = sy-repid.
+  gs_variant_0120_b-handle = 'I120'.
+  gv_save_0120_b = 'A'.
+
+
+ENDFORM.
+<font color ="#0000FF">*&---------------------------------------------------------------------*</font>
+<font color ="#0000FF">*& Form set_alv_field_cat_0120_B</font>
+<font color ="#0000FF">*&---------------------------------------------------------------------*</font>
+FORM set_alv_field_cat_0120_B .
+
+  CALL FUNCTION 'LVC_FIELDCATALOG_MERGE'
+    EXPORTING
+      i_structure_name = 'ZCA_FIT050'
+    CHANGING
+      ct_fieldcat      = gt_field_cat_0120_b.
+
+  CLEAR gs_field_cat.
+  LOOP AT  gt_field_cat_0120_b INTO gs_field_cat.
+    CASE gs_field_cat-fieldname.
+      WHEN 'AUGDT'.
+        gs_field_cat-checkbox = 'X'.
+      WHEN 'DMBTR'.
+        gs_field_cat-no_out = 'X'.
+      WHEN 'BPCODE' OR 'BSCHL' OR 'AUGBL'.
+        gs_field_cat-hotspot = 'X'.
+    ENDCASE.
+    MODIFY gt_field_cat_0120_b FROM gs_field_cat.
+  ENDLOOP.
+
+  CLEAR gs_field_cat.
+  gs_field_cat-fieldname = 'DEBIT'.
+  gs_field_cat-coltext    = '차변'.
+  gs_field_cat-cfieldname  = 'WAERS'.
+  gs_field_cat-do_sum = 'X'.
+  APPEND gs_field_cat TO gt_field_cat_0120_b.
+
+  CLEAR gs_field_cat.
+  gs_field_cat-fieldname = 'CREDIT'.
+  gs_field_cat-coltext    = '대변'.
+  gs_field_cat-cfieldname  = 'WAERS'.
+  gs_field_cat-do_sum = 'X'.
+  APPEND gs_field_cat TO gt_field_cat_0120_b.
+
+ENDFORM.
+<font color ="#0000FF">*&---------------------------------------------------------------------*</font>
+<font color ="#0000FF">*& Form make_cust_info</font>
+<font color ="#0000FF">*&---------------------------------------------------------------------*</font>
+FORM make_cust_info  USING    ps_clearing_kunnr.
+
+  SELECT SINGLE * INTO @gs_kna1
+         FROM zca_kna1
+         WHERE kunnr = @gs_clearing-kunnr.
+
+ENDFORM.
+<font color ="#0000FF">*&---------------------------------------------------------------------*</font>
+<font color ="#0000FF">*& Form set_handler_0120_b</font>
+<font color ="#0000FF">*&---------------------------------------------------------------------*</font>
+FORM set_handler_0120_b .
+
+  SET HANDLER lcl_event_handler=&gt;on_hotspot_click FOR go_alv_grid_0120_b.
+
+ENDFORM.
+<font color ="#0000FF">*&---------------------------------------------------------------------*</font>
+<font color ="#0000FF">*& Form set_alv_layout_0100</font>
+<font color ="#0000FF">*&---------------------------------------------------------------------*</font>
+FORM set_alv_layout_0100 .
+
+ENDFORM.
+<font color ="#0000FF">*&---------------------------------------------------------------------*</font>
+<font color ="#0000FF">*& Form restore_credit</font>
+<font color ="#0000FF">*&---------------------------------------------------------------------*</font>
+FORM sd_restore_credit  USING    ps_sdt120 TYPE zca_sdt120.
+
+  " 여신 잔액 조회
+  SELECT SINGLE credit_bal
+    FROM zca_sdt020
+    INTO @DATA(lv_creditbal)
+    WHERE cuscode EQ @ps_sdt120-cuscode.
+
+  "판매오더 금액 조회
+  SELECT SINGLE netwr
+    FROM zca_sdt080
+    INTO @DATA(lv_netwr)
+    WHERE sales_no EQ @ps_sdt120-sales_no.
+
+  lv_creditbal += lv_netwr.
+
+  UPDATE zca_sdt020
+  SET credit_bal = lv_creditbal
+  WHERE cuscode EQ ps_sdt120-cuscode.
+
+  CLEAR: lv_netwr,
+         lv_creditbal.
+ENDFORM.
+<font color ="#0000FF">*&---------------------------------------------------------------------*</font>
+<font color ="#0000FF">*& Form revoke_contract</font>
+<font color ="#0000FF">*&---------------------------------------------------------------------*</font>
+FORM sd_revoke_contract USING ps_sdt120 TYPE zca_sdt120 .
+
+  SELECT SINGLE vbeln
+    FROM zca_sdt080
+    INTO @DATA(lv_VBELN)
+    WHERE sales_no = @ps_sdt120-sales_no.
+
+
+  UPDATE zca_sdt050
+  SET status7 = 'X'
+  WHERE vbeln = @lv_VBELN.
+
+  UPDATE zca_sdt020
+  SET default_count = 0
+  WHERE cuscode = @ps_sdt120-cuscode.
+
+
+ENDFORM.
+<font color ="#0000FF">*&---------------------------------------------------------------------*</font>
+<font color ="#0000FF">*& Form set_clearing_filter</font>
+<font color ="#0000FF">*&---------------------------------------------------------------------*</font>
+<font color ="#0000FF">*& text</font>
+<font color ="#0000FF">*&---------------------------------------------------------------------*</font>
+<font color ="#0000FF">*&      --&gt; SPACE</font>
+<font color ="#0000FF">*&      --&gt; GO_ALV_GRID_0120</font>
+<font color ="#0000FF">*&---------------------------------------------------------------------*</font>
+FORM set_clearing_filter  USING  pv_blart
+                                 po_grid TYPE REF TO cl_gui_alv_grid.
+
+  DATA lt_filter TYPE lvc_t_filt.   " Table Type
+  DATA ls_filter LIKE LINE OF lt_filter.
+
+  " filtering
+  IF pv_blart IS NOT INITIAL.
+    CLEAR ls_filter.
+    ls_filter-fieldname = 'BLART'.
+    ls_filter-sign = 'I'.
+    ls_filter-option = 'EQ'.
+    ls_filter-low = pv_blart.
+    ls_filter-high = space.
+
+    APPEND ls_filter TO lt_filter.
+  ENDIF.
+
+  CALL METHOD po_grid-&gt;set_filter_criteria
+    EXPORTING
+      it_filter = lt_filter.             " Filter Conditions
+
+  DATA ls_stable TYPE lvc_s_stbl.
+
+  " 행, 열 유지
+  ls_stable-row = abap_on.
+  ls_stable-col = abap_on.
+
+  " soft refresh
+  CALL METHOD po_grid-&gt;refresh_table_display
+    EXPORTING
+      is_stable = ls_stable.
+
+
+ENDFORM.
+</pre>
+<hr>
+<font size="2" face = "Sans Serif">Extracted by Direct Download Enterprise version 1.3.1 - E.G.Mellodew. 1998-2005 UK. Sap Release 758
+</font>
+</body>
+</html>

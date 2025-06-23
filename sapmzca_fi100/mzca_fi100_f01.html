@@ -1,0 +1,241 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 3.2//EN">
+<html>
+<head>
+<title>MZCA_FI100_F01</title>
+</head>
+<body bgcolor="#FFFFE0">
+<font size="3" face = "Arial" color="#000000"><b>Code listing for: MZCA_FI100_F01</b></font>
+<br>
+<font size="3" face = "Arial" color="#000000"><b>Description:  Subroutines</b></font>
+<hr>
+<pre width="100">
+<font color ="#0000FF">*&---------------------------------------------------------------------*</font>
+<font color ="#0000FF">*& Include          MZCA_FI100_F01</font>
+<font color ="#0000FF">*&---------------------------------------------------------------------*</font>
+<font color ="#0000FF">*&---------------------------------------------------------------------*</font>
+<font color ="#0000FF">*& Form create_header : 전표 헤더 생성</font>
+<font color ="#0000FF">*&---------------------------------------------------------------------*</font>
+FORM create_header .
+
+  DATA lv_belnr TYPE zca_fit040-belnr.
+  MOVE-CORRESPONDING zca_fit040 TO gs_header. " 헤더 내용을 zca_fit040으로 넘김.
+
+  PERFORM get_belnr_next USING lv_belnr. " 전표 헤더의 다음 번호를 받아온다.
+  gs_header-belnr = lv_belnr. " 다음 번호로 저장
+
+  " gs_header 를 table에 생성
+  gs_header-ernam = sy-uname.
+  gs_header-erdat = sy-datum.
+  gs_header-erzet = sy-uzeit.
+
+<font color ="#0000FF">*  INSERT zca_fit040 FROM gs_header. " 실제 저장에서 이루어진다.</font>
+  zca_fit040 = gs_header.
+  IF sy-subrc EQ 0.
+    MESSAGE S406 with lv_belnr. " 전표 헤더 &번이 저장되었습니다.
+    gv_header_created = abap_true.
+  ENDIF.
+
+ENDFORM.
+<font color ="#0000FF">*&---------------------------------------------------------------------*</font>
+<font color ="#0000FF">*& Form create_object_0100</font>
+<font color ="#0000FF">*&---------------------------------------------------------------------*</font>
+FORM create_object_0100 .
+
+  CREATE OBJECT go_container
+    EXPORTING
+      container_name = 'CCON'.   " 화면에 내가 만든 CCON Area의 이름
+
+  CREATE OBJECT go_alv_grid
+    EXPORTING
+      i_parent = go_container.   " Parent Container
+
+ENDFORM.
+<font color ="#0000FF">*&---------------------------------------------------------------------*</font>
+<font color ="#0000FF">*& Form set_alv_layout_0100</font>
+<font color ="#0000FF">*&---------------------------------------------------------------------*</font>
+FORM set_alv_layout_0100 .
+
+  CLEAR gs_layout.
+  CLEAR gs_variant.
+
+  " 선택모드는 셀 단위로 지정
+  gs_layout-sel_mode = 'A'.
+  " 얼룩 처리
+  gs_layout-zebra = abap_on.
+  " 열 넓이 최적화
+  gs_layout-cwidth_opt = abap_on.
+
+  " 저장 가능하도록 설정
+  " 저장 모드 -&gt; 모두 가능
+  gs_variant-report    = sy-cprog.
+  gv_save              = 'A'.
+
+ENDFORM.
+<font color ="#0000FF">*&---------------------------------------------------------------------*</font>
+<font color ="#0000FF">*& Form set_alv_fieldcat_0100</font>
+<font color ="#0000FF">*&---------------------------------------------------------------------*</font>
+FORM set_alv_fieldcat_0100 .
+
+ENDFORM.
+<font color ="#0000FF">*&---------------------------------------------------------------------*</font>
+<font color ="#0000FF">*& Form set_alv_event_0100</font>
+<font color ="#0000FF">*&---------------------------------------------------------------------*</font>
+FORM set_alv_event_0100 .
+
+ENDFORM.
+<font color ="#0000FF">*&---------------------------------------------------------------------*</font>
+<font color ="#0000FF">*& Form set_alv_table_for_display_0100</font>
+<font color ="#0000FF">*&---------------------------------------------------------------------*</font>
+FORM set_alv_table_for_display_0100 .
+
+  CALL METHOD go_alv_grid-&gt;set_table_for_first_display
+    EXPORTING
+      i_structure_name = 'ZCA_FIT050'    " Internal Output Table Structure Name
+      is_variant       = gs_variant       " Layout
+      i_save           = gv_save          " Save Layout
+      is_layout        = gs_layout        " Layout
+    CHANGING
+      it_outtab        = gt_item       " Output Table
+<font color ="#0000FF">*     it_fieldcatalog  = gt_field_cat     " Field Catalog</font>
+<font color ="#0000FF">*     it_sort          =                  " Sort Criteria</font>
+<font color ="#0000FF">*     it_filter        =                  " Filter Criteria</font>
+    .
+
+ENDFORM.
+<font color ="#0000FF">*&---------------------------------------------------------------------*</font>
+<font color ="#0000FF">*& Form get_belnr_next</font>
+<font color ="#0000FF">*&---------------------------------------------------------------------*</font>
+FORM get_belnr_next  USING    pv_belnr.
+
+  DATA lv_number TYPE numc10.
+  CALL FUNCTION 'NUMBER_GET_NEXT'
+    EXPORTING
+      nr_range_nr = '01'                " Number range number
+      object      = 'ZCA_BELNR'                " Name of number range object
+      quantity    = '1'              " Number of numbers
+    IMPORTING
+      number      = lv_number                " free number
+    EXCEPTIONS
+      OTHERS      = 1.
+
+  IF sy-subrc EQ 0.
+    pv_belnr = lv_number.
+    MESSAGE S407 with pv_belnr. " 전표 번호 : &
+  ELSE.
+    MESSAGE I408 DISPLAY LIKE 'W'. " 전표 번호 생성 실패
+  ENDIF.
+
+ENDFORM.
+<font color ="#0000FF">*&---------------------------------------------------------------------*</font>
+<font color ="#0000FF">*& Form create_item : 전표 아이템 생성</font>
+<font color ="#0000FF">*&---------------------------------------------------------------------*</font>
+FORM create_item .
+
+<font color ="#0000FF">*  DATA lt_item TYPE TABLE OF zca_fit050.</font>
+  DATA ls_item TYPE zca_fit050.
+  DATA last_item LIKE zca_fit050-itnum VALUE 0.
+
+  " 전표 헤더에 해당하는 전표 아이템을 가지고 옴( 내부에 존재 하는지 체크 )
+  READ TABLE gt_item INTO ls_item WITH KEY  bukrs = zca_fit040-bukrs
+                                            belnr = zca_fit040-belnr
+                                            gjahr = zca_fit040-gjahr.
+
+  IF sy-subrc = 0.
+    " 내부에 존재한다면
+    " 아이템의 가장 마지막 번호 구하기
+    LOOP AT gt_item INTO ls_item WHERE belnr = zca_fit040-belnr
+                                   and bukrs = zca_fit040-bukrs
+                                   and gjahr = zca_fit040-gjahr.
+      IF ls_item-itnum &gt; last_item.
+        last_item = ls_item-itnum.
+      ENDIF.
+    ENDLOOP.
+  ENDIF.
+
+  MOVE-CORRESPONDING zca_fit050 TO gs_item. " 화면에서 작성한 것들 가져오기
+
+  " 나머지 값들 채워주기
+  gs_item-itnum = last_item + 1.    " 아이템번호
+  gs_item-bukrs = zca_fit040-bukrs. " 회사코드
+  gs_item-belnr = zca_fit040-belnr. " 전표번호
+  gs_item-gjahr = zca_fit040-gjahr. " 회계연도
+  gs_item-waers = 'KRW'.            " 통화코드
+  gs_item-bschl = zca_tbsl-bschl.   " 전기키
+
+<font color ="#0000FF">*  INSERT zca_fit050 FROM gs_item. " 실제 DB에는 나중에 insert</font>
+  MESSAGE S409 with gs_item-itnum. " 전표 아이템 &번을 저장했습니다.
+  APPEND gs_item TO gt_item. " gt_item 에 추가 (ALV에 출력될 itab)
+
+  go_alv_grid-&gt;refresh_table_display( ). " alv 새로고침
+  PERFORM calculate_money USING gs_item-bschl gs_item-dmbtr. " 차 / 대변 계산
+
+ENDFORM.
+<font color ="#0000FF">*&---------------------------------------------------------------------*</font>
+<font color ="#0000FF">*& Form calculate_money : 차/대변 계산</font>
+<font color ="#0000FF">*&---------------------------------------------------------------------*</font>
+FORM calculate_money USING pv_bschl pv_dmbtr.
+
+  DATA lv_indi LIKE zca_tbsl-indi_cd.
+  SELECT SINGLE indi_cd FROM zca_tbsl
+    INTO lv_indi WHERE bschl = pv_bschl.
+
+  IF lv_indi EQ 'S'. " 차변
+    s_money += pv_dmbtr.
+
+  ELSE.  " 대변
+    h_money += pv_dmbtr.
+  ENDIF.
+
+  total_money = abs( s_money - h_money ).  " 최종 금액
+
+  IF total_money EQ 0. " 대차 합 = 0
+    icon_flag = 1.
+    status_icon = icon_led_green.
+    status_text = '대차합 0원'(T03).
+    CONCATENATE status_icon status_text INTO st_icon SEPARATED BY space.
+  ELSE. " 불일치
+    icon_flag = 0.
+    status_icon = icon_led_red.
+    status_text = '대차 불일치'(T04).
+    CONCATENATE status_icon status_text INTO st_icon SEPARATED BY space.
+  ENDIF.
+
+ENDFORM.
+<font color ="#0000FF">*&---------------------------------------------------------------------*</font>
+<font color ="#0000FF">*& Form create_document</font>
+<font color ="#0000FF">*&---------------------------------------------------------------------*</font>
+FORM create_document .
+
+ENDFORM.
+<font color ="#0000FF">*&---------------------------------------------------------------------*</font>
+<font color ="#0000FF">*& Form save_document</font>
+<font color ="#0000FF">*&---------------------------------------------------------------------*</font>
+FORM save_document .
+
+  IF total_money &lt;&gt; 0.
+    MESSAGE I410 DISPLAY LIKE 'E'. " 대차가 맞지 않아 전표를 추가할 수 없습니다.
+    RETURN.
+  ENDIF.
+
+  LOOP AT gt_item INTO gs_item.
+    INSERT zca_fit050 FROM gs_item. " 아이템 생성
+  ENDLOOP.
+
+  INSERT zca_fit040 FROM gs_header. " 헤더 생성
+  COMMIT WORK. " 여기서 DB에 저장
+
+  MESSAGE S411. " 전표 저장 완료되었습니다.
+  " 다시 초기화
+  CLEAR: zca_fit040, zca_fit050, zca_tbsl,
+              gt_item[], gs_item, s_money, h_money, total_money,
+              status_icon, status_text, st_icon.
+
+  go_alv_grid-&gt;refresh_table_display( ).
+
+ENDFORM.
+</pre>
+<hr>
+<font size="2" face = "Sans Serif">Extracted by Direct Download Enterprise version 1.3.1 - E.G.Mellodew. 1998-2005 UK. Sap Release 758
+</font>
+</body>
+</html>

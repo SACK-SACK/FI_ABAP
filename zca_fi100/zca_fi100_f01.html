@@ -1,0 +1,279 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 3.2//EN">
+<html>
+<head>
+<title>ZCA_FI100_F01</title>
+</head>
+<body bgcolor="#FFFFE0">
+<font size="3" face = "Arial" color="#000000"><b>Code listing for: ZCA_FI100_F01</b></font>
+<br>
+<font size="3" face = "Arial" color="#000000"><b>Description:  F01</b></font>
+<hr>
+<pre width="100">
+<font color ="#0000FF">*&---------------------------------------------------------------------*</font>
+<font color ="#0000FF">*& Include          ZCA_FI100_F01</font>
+<font color ="#0000FF">*&---------------------------------------------------------------------*</font>
+<font color ="#0000FF">*&---------------------------------------------------------------------*</font>
+<font color ="#0000FF">*& Form select_data</font>
+<font color ="#0000FF">*&---------------------------------------------------------------------*</font>
+FORM select_data .
+
+<font color ="#0000FF">* 전표 Header</font>
+  SELECT *
+          FROM zca_fit040
+          WHERE bukrs EQ @pa_bukrs  " 회사 코드
+            AND gjahr EQ @pa_gjahr  " 회계 연도
+            AND belnr IN @so_belnr  " 전표 번호
+            AND budat IN @so_budat  " 전기 일자
+          INTO CORRESPONDING FIELDS OF TABLE @gt_fit040.
+
+<font color ="#0000FF">* 전표 아이템</font>
+  SELECT * FROM zca_fit050
+          WHERE bukrs EQ @pa_bukrs  " 회사 코드
+            AND gjahr EQ @pa_gjahr  " 회계 연도
+            AND belnr IN @so_belnr  " 전표 번호
+      INTO CORRESPONDING FIELDS OF TABLE @gt_fit050.
+
+ENDFORM.
+<font color ="#0000FF">*&---------------------------------------------------------------------*</font>
+<font color ="#0000FF">*& Form display_data</font>
+<font color ="#0000FF">*&---------------------------------------------------------------------*</font>
+FORM display_data .
+
+  CALL SCREEN 0100.
+
+ENDFORM.
+<font color ="#0000FF">*&---------------------------------------------------------------------*</font>
+<font color ="#0000FF">*& Form create_screen_object</font>
+<font color ="#0000FF">*&---------------------------------------------------------------------*</font>
+FORM create_screen_object  USING    po_container TYPE REF TO cl_gui_custom_container
+                                    po_alv_grid  TYPE REF TO cl_gui_alv_grid
+                                    VALUE(pv_container_name).
+
+  CREATE OBJECT po_container
+    EXPORTING
+      container_name = pv_container_name.
+
+  CREATE OBJECT po_alv_grid
+    EXPORTING
+      i_parent = po_container.
+
+
+ENDFORM.
+<font color ="#0000FF">*&---------------------------------------------------------------------*</font>
+<font color ="#0000FF">*& Form set_alv_layout_0100</font>
+<font color ="#0000FF">*&---------------------------------------------------------------------*</font>
+FORM set_alv_layout_0100 .
+
+  CLEAR gs_layout_0100.
+  gs_layout_0100-sel_mode = 'A'.
+  gs_layout_0100-zebra = abap_on.
+
+<font color ="#0000FF">* Variant 관련</font>
+  gs_variant_0100-report    = sy-repid. " 저장 가능하도록 설정
+  gs_variant_0100-handle    = 'K110'.
+  gv_save_0100              = 'A'.
+
+ENDFORM.
+<font color ="#0000FF">*&---------------------------------------------------------------------*</font>
+<font color ="#0000FF">*& Form set_alv_field_cat_0100</font>
+<font color ="#0000FF">*&---------------------------------------------------------------------*</font>
+FORM set_alv_field_cat_0100 .
+
+  CLEAR gs_field_cat.
+  gs_field_cat-fieldname = 'CATEGORY_SORT'.
+  gs_field_cat-coltext   = '계정유형'.
+  gs_field_cat-outputlen = 10.
+  gs_field_cat-no_out = abap_on.
+  APPEND gs_field_cat TO gt_field_cat_0100.
+
+  CLEAR gs_field_cat.
+  gs_field_cat-fieldname = 'DEBIT'.
+  gs_field_cat-coltext   = '차변'.
+  gs_field_cat-just      = 'R'.
+  gs_field_cat-cfieldname = 'WAERS'.
+  APPEND gs_field_cat TO gt_field_cat_0100.
+
+  CLEAR gs_field_cat.
+  gs_field_cat-fieldname = 'CREDIT'.
+  gs_field_cat-coltext   = '대변'.
+  gs_field_cat-just      = 'R'.
+  gs_field_cat-cfieldname = 'WAERS'.
+  APPEND gs_field_cat TO gt_field_cat_0100.
+
+  CLEAR gs_field_cat.
+  gs_field_cat-fieldname = 'AUGDT'. " 반제 여부
+  gs_field_cat-checkbox = abap_on.
+  APPEND gs_field_cat TO gt_field_cat_0100.
+
+  CLEAR gs_field_cat.
+  gs_field_cat-fieldname = 'BPCODE'.
+  gs_field_cat-hotspot = abap_on.
+  APPEND gs_field_cat TO gt_field_cat_0100.
+
+  CLEAR gs_field_cat.
+  gs_field_cat-fieldname = 'AUGBL'.
+  gs_field_cat-hotspot = abap_on.
+  APPEND gs_field_cat TO gt_field_cat_0100.
+
+  CLEAR gs_field_cat.
+  gs_field_cat-fieldname = 'BELNR'.
+  gs_field_cat-hotspot = abap_on.
+  APPEND gs_field_cat TO gt_field_cat_0100.
+
+  CLEAR gs_field_cat.
+  gs_field_cat-fieldname = 'BSCHL'.
+  gs_field_cat-hotspot = abap_on.
+  APPEND gs_field_cat TO gt_field_cat_0100.
+
+ENDFORM.
+<font color ="#0000FF">*&---------------------------------------------------------------------*</font>
+<font color ="#0000FF">*& Form set_handler_0100</font>
+<font color ="#0000FF">*&---------------------------------------------------------------------*</font>
+FORM set_handler_0100 .
+
+  SET HANDLER lcl_event_handler=&gt;on_hotspot_click FOR go_alv_grid_0100.
+
+ENDFORM.
+<font color ="#0000FF">*&---------------------------------------------------------------------*</font>
+<font color ="#0000FF">*& Form set_alv_table_for_display</font>
+<font color ="#0000FF">*&---------------------------------------------------------------------*</font>
+<font color ="#0000FF">*& text</font>
+<font color ="#0000FF">*&---------------------------------------------------------------------*</font>
+<font color ="#0000FF">*&      --&gt; GT_FIT050</font>
+<font color ="#0000FF">*&      --&gt; GO_ALV_GRID_0100</font>
+<font color ="#0000FF">*&      --&gt; P_</font>
+<font color ="#0000FF">*&      --&gt; GS_LAYOUT_0100</font>
+<font color ="#0000FF">*&      --&gt; GS_VARIANT_0100</font>
+<font color ="#0000FF">*&      --&gt; GV_SAVE_0100</font>
+<font color ="#0000FF">*&      --&gt; GT_FIELD_CAT_0100</font>
+<font color ="#0000FF">*&---------------------------------------------------------------------*</font>
+FORM set_alv_table_for_display  USING  pt_table          TYPE STANDARD TABLE
+                                        po_alv_grid       TYPE REF TO cl_gui_alv_grid
+                                        pv_structure_name TYPE c
+                                        ps_layout         TYPE lvc_s_layo
+                                        ps_variant        TYPE disvariant
+                                        pv_save           TYPE c
+                                        pt_field_cat      TYPE STANDARD TABLE .
+
+  CALL METHOD po_alv_grid-&gt;set_table_for_first_display
+    EXPORTING
+      i_structure_name = pv_structure_name    " Internal Output Table Structure Name
+      is_variant       = ps_variant       " Layout
+      i_save           = pv_save          " Save Layout
+      is_layout        = ps_layout        " Layout
+    CHANGING
+      it_outtab        = pt_table       " Output Table
+      it_fieldcatalog  = pt_field_cat     " Field Catalog
+<font color ="#0000FF">*     it_sort          =                  " Sort Criteria</font>
+<font color ="#0000FF">*     it_filter        =                  " Filter Criteria</font>
+    .
+
+ENDFORM.
+<font color ="#0000FF">*&---------------------------------------------------------------------*</font>
+<font color ="#0000FF">*& Form make_display_data</font>
+<font color ="#0000FF">*&---------------------------------------------------------------------*</font>
+FORM make_display_data .
+
+  LOOP AT gt_fit050 INTO gs_fit050.
+    CLEAR gs_result.
+    screen0100-all += 1.
+    screen0100-curr0 += gs_fit050-dmbtr.
+
+    MOVE-CORRESPONDING gs_fit050 TO gs_result.
+    CASE gs_fit050-saknr+0(1).
+      WHEN '1'.
+        gs_result-category_sort = 1. " 자산
+        screen0100-cate1 += 1.
+        screen0100-curr1 += gs_fit050-dmbtr.
+      WHEN '2'.
+        gs_result-category_sort = 2. " 부채
+        screen0100-cate2 += 1.
+        screen0100-curr2 += gs_fit050-dmbtr.
+      WHEN '3'.
+        gs_result-category_sort = 3. " 자본
+        screen0100-cate3 += 1.
+        screen0100-curr3 += gs_fit050-dmbtr.
+      WHEN '4'.
+        gs_result-category_sort = 4. " 수익
+        screen0100-cate4 += 1.
+        screen0100-curr4 += gs_fit050-dmbtr.
+      WHEN '5'.
+        gs_result-category_sort = 5. " 비용
+        screen0100-cate5 += 1.
+        screen0100-curr5 += gs_fit050-dmbtr.
+      WHEN OTHERS.
+        gs_result-category_sort = 9. " 기타
+    ENDCASE.
+
+    CASE gs_fit050-bschl.
+      WHEN '11' OR '21' OR '31' OR '41'.
+        gs_result-debit = gs_result-dmbtr.
+        gs_result-credit = 0.
+      WHEN '12' OR '22' OR '32' OR '42'.
+        gs_result-debit = 0.
+        gs_result-credit = gs_result-dmbtr.
+      WHEN OTHERS.
+        gs_result-debit = 0.
+        gs_result-credit = 0.
+    ENDCASE.
+
+    APPEND gs_result TO gt_result.
+  ENDLOOP.
+
+  SORT gt_result BY category_sort saknr belnr.
+  screen0100-cuky0 = gs_fit050-waers.
+  screen0100-cuky1 = gs_fit050-waers.
+  screen0100-cuky2 = gs_fit050-waers.
+  screen0100-cuky3 = gs_fit050-waers.
+  screen0100-cuky4 = gs_fit050-waers.
+  screen0100-cuky5 = gs_fit050-waers.
+
+ENDFORM.
+<font color ="#0000FF">*&---------------------------------------------------------------------*</font>
+<font color ="#0000FF">*& Form set_category_data</font>
+<font color ="#0000FF">*&---------------------------------------------------------------------*</font>
+FORM set_category_data .
+
+  DATA lv_category_sort TYPE i.
+
+  CASE ok_code.
+    WHEN 'FC1'. lv_category_sort = 1. " 자산
+    WHEN 'FC2'. lv_category_sort = 2. " 부채
+    WHEN 'FC3'. lv_category_sort = 3. " 자본
+    WHEN 'FC4'. lv_category_sort = 4. " 수익
+    WHEN 'FC5'. lv_category_sort = 5. " 비용
+    WHEN OTHERS. RETURN. " 나머지는 무시
+  ENDCASE.
+
+  " 필터 설정
+  DATA lt_filter TYPE lvc_t_filt.
+  DATA ls_filter TYPE lvc_s_filt.
+
+  CLEAR ls_filter.
+  ls_filter-fieldname = 'CATEGORY_SORT'.
+  ls_filter-sign = 'I'.
+  ls_filter-option = 'EQ'.
+  ls_filter-low = lv_category_sort.
+  APPEND ls_filter TO lt_filter.
+
+  " 필터 적용
+  CALL METHOD go_alv_grid_0100-&gt;set_filter_criteria
+    EXPORTING
+      it_filter = lt_filter.
+
+  " 화면 안정적 리프레시
+  DATA ls_stable TYPE lvc_s_stbl.
+  ls_stable-row = abap_true.
+  ls_stable-col = abap_true.
+
+  CALL METHOD go_alv_grid_0100-&gt;refresh_table_display
+    EXPORTING
+      is_stable = ls_stable.
+
+ENDFORM.
+</pre>
+<hr>
+<font size="2" face = "Sans Serif">Extracted by Direct Download Enterprise version 1.3.1 - E.G.Mellodew. 1998-2005 UK. Sap Release 758
+</font>
+</body>
+</html>
