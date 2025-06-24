@@ -29,8 +29,9 @@ ui5-deploy.yaml
 package-lock.json
 
 # macOS
-.DS_Store
-
+.DS_Store 
+**/.DS_Store
+*/.DS_Store
 # IDE settings
 .vscode/
 .idea/
