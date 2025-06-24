@@ -107,6 +107,6 @@ FI 모듈의 전표 처리, 수금/지급, 결산 계산, 외부 모듈 연동(M
 ## 👨‍💻 작성자
 
 - [**주현정**](https://github.com/hyun-jung-joo) 
-- **진소정**
+- [**진소정**](https://github.com/jinsojeong)
 
 > SAP SYNC ACADEMY 6기 | ERP FI 통합 개발 프로젝트
